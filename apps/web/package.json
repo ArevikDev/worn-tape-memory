@@ -23,7 +23,7 @@
     "express": "^5.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
-    "@echo/shared": "workspace:*"
+    "@worn-tape-memory/shared": "workspace:*"
   },
   "devDependencies": {
     "@angular/build": "^21.2.12",

@@ -1,6 +1,6 @@
-# Echo — Docs
+# Worn Tape Memory — Docs
 
-This folder contains everything needed to build Echo from scratch.
+This folder contains everything needed to build Worn Tape Memory from scratch.
 
 ## What's here
 
@@ -19,7 +19,7 @@ This folder contains everything needed to build Echo from scratch.
    - The three numbered docs go in a `/docs` folder
 3. Open the project in VS Code with Claude Code extension
 4. Start a new chat with Claude Code, paste:
-   > Read `CLAUDE.md` and the docs in `/docs`. We're working on Echo. Confirm you understand the product, stack, and build plan, then we'll begin Day 1 of the build plan.
+   > Read `CLAUDE.md` and the docs in `/docs`. We're working on Worn Tape Memory. Confirm you understand the product, stack, and build plan, then we'll begin Day 1 of the build plan.
 5. Claude Code reads the docs, gives you a confirmation, then start building day by day
 
 ## Recommended setup before Day 1
@@ -34,7 +34,7 @@ This folder contains everything needed to build Echo from scratch.
 
 ## The interview pitch (memorize)
 
-> Spotify daylist tells you what to listen to right now. Echo tells you who you've been all year, based on every right-now you've had. It's the difference between a weather forecast and a climate.
+> Spotify daylist tells you what to listen to right now. Worn Tape Memory tells you who you've been all year, based on every right-now you've had. It's the difference between a weather forecast and a climate.
 
 ## The technical pitch (memorize)
 

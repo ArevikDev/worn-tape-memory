@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: echo
-      POSTGRES_PASSWORD: echo
-      POSTGRES_DB: echo
+      POSTGRES_USER: worn_tape_memory
+      POSTGRES_PASSWORD: worn_tape_memory
+      POSTGRES_DB: worn_tape_memory
     ports: ['5432:5432']
     volumes:
       - postgres-data:/var/lib/postgresql/data

@@ -1,15 +1,15 @@
-# Echo — Claude Code Primer
+# Worn Tape Memory — Claude Code Primer
 
 > Drop this file in your repo root. Reference it in your first conversation with Claude Code (or Cursor / Copilot Agent) to get fast, aligned output.
-> When you start a new session, say: *"Read CLAUDE.md and the docs in `/docs`. We're working on Echo."*
+> When you start a new session, say: *"Read CLAUDE.md and the docs in `/docs`. We're working on Worn Tape Memory."*
 
 ---
 
 ## What we're building
 
-**Echo** — a music intelligence layer on top of Spotify. Read `/docs/01-PRD.md` for full product context. Read `/docs/02-TRD.md` for architecture. Read `/docs/03-BUILD-PLAN.md` for what we're shipping when.
+**Worn Tape Memory** — a music intelligence layer on top of Spotify. Read `/docs/01-PRD.md` for full product context. Read `/docs/02-TRD.md` for architecture. Read `/docs/03-BUILD-PLAN.md` for what we're shipping when.
 
-In one line: Spotify daylist tells you what to listen to now; Echo tells you who you've been all year — and lets you play that self on demand.
+In one line: Spotify daylist tells you what to listen to now; Worn Tape Memory tells you who you've been all year — and lets you play that self on demand.
 
 ---
 
@@ -59,7 +59,7 @@ Monorepo via pnpm workspaces: `apps/web`, `apps/api`, `packages/shared`.
 - **Vibe vector** — 8-dim float array used for clustering tracks in mood space
 - **Mood weather** — visualization of mood across time as colored bands
 - **Mood map** — 2D projection of vibe vectors, showing the user's library as a constellation
-- **Living playlist** — a Spotify playlist exported from Echo that re-syncs weekly as data evolves
+- **Living playlist** — a Spotify playlist exported from Worn Tape Memory that re-syncs weekly as data evolves
 
 ---
 
@@ -243,7 +243,7 @@ I'd rather you ask twice than build the wrong thing once.
 
 ## Things that are NOT for you to decide
 
-- Naming the product (it's Echo, not "Echoes" or "Echo App")
+- Naming the product (it's Worn Tape Memory, not "Worn Tape Memoryes" or "Worn Tape Memory App")
 - Stack choices (locked, see above)
 - Whether to add a feature outside the MVP scope (no, defer to post-MVP backlog)
 - Whether to write tests for everything (no, see TRD §9)

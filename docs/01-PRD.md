@@ -1,4 +1,4 @@
-# Echo — Product Requirements Document
+# Worn Tape Memory — Product Requirements Document
 
 > A music intelligence layer on top of Spotify. Connect once, and the app passively captures everything you play, characterizes it with AI, and turns it into a beautiful, opinionated view of your listening life.
 
@@ -11,10 +11,10 @@
 ## 1. Vision
 
 ### One-line pitch
-Spotify daylist tells you what to listen to now. Echo tells you who you've been all year — and lets you play that self on demand.
+Spotify daylist tells you what to listen to now. Worn Tape Memory tells you who you've been all year — and lets you play that self on demand.
 
 ### Three-line pitch
-Echo passively syncs your Spotify listening history, uses AI to characterize every track's mood and energy, and surfaces patterns you'd never find on your own: the personas hiding in your habits, the emotional weather of your year, the gaps in your library. Every insight is shareable. Every mood is one tap from playing in Spotify. Zero manual logging.
+Worn Tape Memory passively syncs your Spotify listening history, uses AI to characterize every track's mood and energy, and surfaces patterns you'd never find on your own: the personas hiding in your habits, the emotional weather of your year, the gaps in your library. Every insight is shareable. Every mood is one tap from playing in Spotify. Zero manual logging.
 
 ### Why this exists
 - Spotify owns your *listening* but treats it as a stream-optimization signal, not as identity.

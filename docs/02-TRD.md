@@ -1,6 +1,6 @@
-# Echo — Technical Requirements Document
+# Worn Tape Memory — Technical Requirements Document
 
-> Architecture, data model, integrations, and engineering decisions for the Echo MVP.
+> Architecture, data model, integrations, and engineering decisions for the Worn Tape Memory MVP.
 
 **Companion to:** `01-PRD.md`
 **Audience:** Future you, Claude Code, interviewers.
@@ -287,7 +287,7 @@ Spotify's recently-played returns overlapping windows. The unique constraint on 
 - All Spotify tokens encrypted at rest (use Node's `crypto` with a key from env)
 - JWTs in httpOnly cookies, SameSite=Lax, Secure in prod
 - CSRF tokens on all state-changing endpoints
-- Don't expose Spotify access tokens to the frontend, ever — frontend talks to Echo backend only
+- Don't expose Spotify access tokens to the frontend, ever — frontend talks to Worn Tape Memory backend only
 - Gemini API key only on backend, never in client bundle
 - Rate-limit per-IP on auth endpoints
 - HTTPS everywhere

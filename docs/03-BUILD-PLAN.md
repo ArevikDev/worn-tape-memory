@@ -1,4 +1,4 @@
-# Echo — 3-Week Build Plan
+# Worn Tape Memory — 3-Week Build Plan
 
 > Day-by-day plan to get from empty repo to demo-ready in 21 days.
 > Assumes ~3 hrs/day average with Claude Code assistance. Adjust pace as needed.
