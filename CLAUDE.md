@@ -7,9 +7,11 @@
 
 ## What we're building
 
-**Worn Tape Memory** — a music intelligence layer on top of Spotify. Read `/docs/01-PRD.md` for full product context. Read `/docs/02-TRD.md` for architecture. Read `/docs/03-BUILD-PLAN.md` for what we're shipping when.
+**Worn Tape Memory** — a music intelligence layer on top of Spotify. The name comes from the way a cassette sounds after it's been played a hundred times — slightly degraded, deeply personal. That's what this app is: your listening history, worn in, made meaningful.
 
-In one line: Spotify daylist tells you what to listen to now; Worn Tape Memory tells you who you've been all year — and lets you play that self on demand.
+Read `/docs/01-PRD.md` for full product context. Read `/docs/02-TRD.md` for architecture. Read `/docs/03-BUILD-PLAN.md` for what we're shipping when.
+
+In one line: Spotify tells you what to listen to. Worn Tape Memory tells you who you've been — and lets you play that self on demand.
 
 ---
 
@@ -243,7 +245,7 @@ I'd rather you ask twice than build the wrong thing once.
 
 ## Things that are NOT for you to decide
 
-- Naming the product (it's Worn Tape Memory, not "Worn Tape Memoryes" or "Worn Tape Memory App")
+- Naming the product (it's Worn Tape Memory — never shorten to "WTM" or rename it)
 - Stack choices (locked, see above)
 - Whether to add a feature outside the MVP scope (no, defer to post-MVP backlog)
 - Whether to write tests for everything (no, see TRD §9)
