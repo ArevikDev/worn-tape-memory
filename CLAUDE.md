@@ -7,7 +7,7 @@
 
 ## What we're building
 
-**Worn Tape Memory** — a music intelligence layer on top of Spotify. The name comes from the way a cassette sounds after it's been played a hundred times — slightly degraded, deeply personal. That's what this app is: your listening history, worn in, made meaningful.
+**Worn Tape Memory** — a music intelligence layer on top of Spotify. The name comes from the way a cassette sounds after it's been played a hundred times — slightly degraded, deeply personal. That's what this app is: the tape always comes back slightly different.
 
 Read `/docs/01-PRD.md` for full product context. Read `/docs/02-TRD.md` for architecture. Read `/docs/03-BUILD-PLAN.md` for what we're shipping when.
 

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "pnpm --parallel --filter api --filter web dev",
+    "kill": "lsof -ti :3000,:4200 | xargs kill -9 2>/dev/null || true",
+    "redev": "pnpm kill && pnpm dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",

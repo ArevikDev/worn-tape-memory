@@ -1,4 +1,2 @@
-export * from './types/archetype';
-export * from './types/track';
-export * from './types/listen';
-export * from './types/insight';
+export * from './types/archetypes';
+export * from './types/auth';
