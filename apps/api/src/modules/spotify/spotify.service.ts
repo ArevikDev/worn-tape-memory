@@ -20,6 +20,19 @@ export interface SpotifyProfile {
   images: { url: string }[];
 }
 
+export interface SpotifyCurrentlyPlaying {
+  is_playing: boolean;
+  progress_ms: number;
+  item: {
+    id: string;
+    name: string;
+    uri: string;
+    duration_ms: number;
+    artists: { name: string }[];
+    album: { name: string; images: { url: string }[] };
+  } | null;
+}
+
 @Injectable()
 export class SpotifyService {
   private readonly logger = new Logger(SpotifyService.name);
@@ -101,6 +114,19 @@ export class SpotifyService {
     }
 
     return response.json() as Promise<SpotifyProfile>;
+  }
+
+  // Returns null if nothing is currently playing (Spotify returns 204)
+  async getCurrentlyPlaying(accessToken: string): Promise<SpotifyCurrentlyPlaying | null> {
+    const response = await fetch(
+      'https://api.spotify.com/v1/me/player/currently-playing',
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+
+    if (response.status === 204) return null; // nothing playing
+    if (!response.ok) return null; // treat errors as "nothing playing"
+
+    return response.json() as Promise<SpotifyCurrentlyPlaying>;
   }
 
   // Refreshes proactively if the token expires within 60 seconds.

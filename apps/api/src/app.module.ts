@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './modules/auth/auth.module';
 import { SpotifyModule } from './modules/spotify/spotify.module';
 import { SyncModule } from './modules/sync/sync.module';
+import { StatsModule } from './modules/stats/stats.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SyncModule } from './modules/sync/sync.module';
     AuthModule,
     SpotifyModule,
     SyncModule,
+    StatsModule,
   ],
 })
 export class AppModule {}
