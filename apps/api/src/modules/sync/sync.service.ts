@@ -8,8 +8,9 @@ import { users, tracks, listens } from '../../db/schema';
 import { SpotifyService } from '../spotify/spotify.service';
 import { DRIZZLE_CLIENT } from '../auth/auth.service';
 import { SYNC_LISTENS_QUEUE, SyncListensJobData } from './sync.constants';
+import { EnrichmentService } from '../enrichment/enrichment.service';
 
-// ---------- Spotify API types ----------
+
 interface SpotifyArtist {
   id: string;
   name: string;
@@ -49,6 +50,7 @@ export class SyncService {
   constructor(
     @Inject(DRIZZLE_CLIENT) private readonly db: DrizzleClient,
     private readonly spotify: SpotifyService,
+    private readonly enrichment: EnrichmentService,
     @InjectQueue(SYNC_LISTENS_QUEUE) private readonly syncQueue: Queue<SyncListensJobData>,
   ) {}
 
@@ -90,7 +92,7 @@ export class SyncService {
       const t = item.track;
 
       // 1. Upsert the track — one row per unique Spotify track, shared across all users
-      await this.db
+      const [newTrack] = await this.db
         .insert(tracks)
         .values({
           spotifyTrackId: t.id,
@@ -106,20 +108,29 @@ export class SyncService {
             ? parseInt(t.album.release_date.substring(0, 4), 10)
             : null,
         })
-        .onConflictDoNothing(); // already exists → skip, we'll fetch it below
+        .onConflictDoNothing()
+        .returning({ id: tracks.id, spotifyTrackId: tracks.spotifyTrackId });
+
+      // Newly inserted track → enqueue AI enrichment
+      if (newTrack) {
+        await this.enrichment.enqueueEnrichTrack(newTrack.spotifyTrackId);
+      }
 
       // 2. Get the track's internal ID (works whether just inserted or already existed)
-      const [track] = await this.db
-        .select({ id: tracks.id })
-        .from(tracks)
-        .where(eq(tracks.spotifyTrackId, t.id));
+      const trackId =
+        newTrack?.id ??
+        (await this.db
+          .select({ id: tracks.id })
+          .from(tracks)
+          .where(eq(tracks.spotifyTrackId, t.id))
+          .then(([r]) => r.id));
 
       // 3. Insert the listen — skip silently if this exact play was already recorded
       const result = await this.db
         .insert(listens)
         .values({
           userId,
-          trackId: track.id,
+          trackId,
           spotifyTrackId: t.id,
           playedAt: new Date(item.played_at),
         })

@@ -6,6 +6,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { SpotifyModule } from './modules/spotify/spotify.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { StatsModule } from './modules/stats/stats.module';
+import { EnrichmentModule } from './modules/enrichment/enrichment.module';
 
 @Module({
   imports: [
@@ -26,13 +27,13 @@ import { StatsModule } from './modules/stats/stats.module';
       },
     }),
 
-    // Cron scheduler
     ScheduleModule.forRoot(),
 
     AuthModule,
     SpotifyModule,
     SyncModule,
     StatsModule,
+    EnrichmentModule,
   ],
 })
 export class AppModule {}
