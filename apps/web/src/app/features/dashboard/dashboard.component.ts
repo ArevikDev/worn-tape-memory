@@ -1,7 +1,11 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import type { AuthUser } from '@worn-tape-memory/shared';
+
+const API_BASE = 'http://127.0.0.1:3000';
 
 @Component({
   selector: 'app-dashboard',
@@ -21,9 +25,33 @@ import type { AuthUser } from '@worn-tape-memory/shared';
             Hello, {{ user()!.displayName ?? user()!.spotifyUserId }}
           </h1>
           <p class="text-zinc-500 text-sm">You're connected. Dashboard coming soon.</p>
+
+          <!-- Sync button -->
+          <button
+            (click)="sync()"
+            [disabled]="syncing()"
+            class="flex items-center gap-2 mx-auto bg-zinc-800 hover:bg-zinc-700
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            @if (syncing()) {
+              <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>Syncing…</span>
+            } @else {
+              <span>↻</span>
+              <span>Sync listens</span>
+            }
+          </button>
+
+          @if (syncResult() !== null) {
+            <p class="text-zinc-400 text-xs">
+              {{ syncResult() === 0 ? 'Already up to date' : syncResult() + ' new listens added' }}
+            </p>
+          }
+
           <button
             (click)="logout()"
-            class="text-zinc-500 hover:text-zinc-300 text-sm underline underline-offset-2 transition-colors"
+            class="block mx-auto text-zinc-600 hover:text-zinc-400 text-sm underline underline-offset-2 transition-colors"
           >
             Log out
           </button>
@@ -36,12 +64,33 @@ import type { AuthUser } from '@worn-tape-memory/shared';
 })
 export class DashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+
   protected readonly user = signal<AuthUser | null>(null);
+  protected readonly syncing = signal(false);
+  protected readonly syncResult = signal<number | null>(null);
 
   async ngOnInit(): Promise<void> {
     const result = await this.auth.loadCurrentUser();
     if (result) this.user.set(result);
+  }
+
+  async sync(): Promise<void> {
+    this.syncing.set(true);
+    this.syncResult.set(null);
+    try {
+      const result = await firstValueFrom(
+        this.http.post<{ inserted: number }>(
+          `${API_BASE}/sync/me`,
+          {},
+          { withCredentials: true },
+        ),
+      );
+      this.syncResult.set(result.inserted);
+    } finally {
+      this.syncing.set(false);
+    }
   }
 
   async logout(): Promise<void> {
