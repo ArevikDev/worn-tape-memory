@@ -7,6 +7,7 @@ import { SpotifyModule } from './modules/spotify/spotify.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { EnrichmentModule } from './modules/enrichment/enrichment.module';
+import { ArchetypesModule } from './modules/archetypes/archetypes.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { EnrichmentModule } from './modules/enrichment/enrichment.module';
     SyncModule,
     StatsModule,
     EnrichmentModule,
+    ArchetypesModule,
   ],
 })
 export class AppModule {}

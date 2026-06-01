@@ -37,6 +37,7 @@
     "bullmq": "^5.77.6",
     "cookie-parser": "^1.4.7",
     "drizzle-orm": "^0.45.2",
+    "ml-kmeans": "^7.0.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.21.0",

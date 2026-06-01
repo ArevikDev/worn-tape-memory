@@ -2,6 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+export interface ArchetypeNamingInput {
+  peakHour: number;
+  peakDayOfWeek: number;
+  dominantMoods: string[];
+  topTracks: string[];
+  playCount: number;
+}
+
+export interface ArchetypeNamingResult {
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+}
+
 export interface TrackEnrichmentInput {
   name: string;
   artist: string;
@@ -65,6 +80,69 @@ Return:
     ) {
       this.logger.error(`Gemini response missing fields for "${input.name}": ${cleaned}`);
       throw new Error('Gemini response missing required fields');
+    }
+
+    return parsed;
+  }
+
+  async nameArchetype(
+    input: ArchetypeNamingInput,
+  ): Promise<ArchetypeNamingResult> {
+    const days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const hourLabel =
+      input.peakHour < 12
+        ? `${input.peakHour === 0 ? 12 : input.peakHour}am`
+        : input.peakHour === 12
+          ? '12pm'
+          : `${input.peakHour - 12}pm`;
+
+    const prompt = `You are a perceptive music observer. Below is a cluster of one listener's plays. Generate a persona.
+
+Cluster summary:
+- Peak hour: ${hourLabel}
+- Peak day: ${days[input.peakDayOfWeek]}
+- Dominant moods: ${input.dominantMoods.join(', ')}
+- Top tracks: ${input.topTracks.slice(0, 5).join('; ')}
+- Total plays: ${input.playCount}
+
+Return JSON only — no prose, no markdown:
+{
+  "name": "The [3-6 words, evocative, specific — not generic vibes]",
+  "description": "[1-2 sentences in second person, like 'sad indie played late after a heavy day']",
+  "color": "#hex (a single color that captures the mood)",
+  "icon": "tabler-icon-name (e.g. 'moon', 'coffee', 'bolt', 'vinyl', 'headphones', 'music', 'flame', 'wave-sine', 'cloud', 'star')"
+}
+
+Examples of good names: "The 11pm wound-licker", "The Sunday morning archivist", "The Thursday DJ".
+Examples of bad names: "Late night vibes", "Sad music lover", "Energy boost playlist".`;
+
+    const result = await this.model.generateContent(prompt);
+    const raw = result.response.text().trim();
+    const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+
+    let parsed: ArchetypeNamingResult;
+    try {
+      parsed = JSON.parse(cleaned) as ArchetypeNamingResult;
+    } catch {
+      this.logger.error(`Failed to parse Gemini archetype response: ${raw}`);
+      throw new Error('Gemini returned invalid JSON for archetype naming');
+    }
+
+    if (
+      typeof parsed.name !== 'string' ||
+      typeof parsed.description !== 'string' ||
+      typeof parsed.color !== 'string' ||
+      typeof parsed.icon !== 'string'
+    ) {
+      throw new Error('Gemini archetype response missing required fields');
     }
 
     return parsed;
