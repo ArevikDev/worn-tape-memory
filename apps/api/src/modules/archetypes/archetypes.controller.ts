@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ArchetypesService } from './archetypes.service';
 
@@ -29,5 +29,11 @@ export class ArchetypesController {
   @Post(':id/play')
   playArchetype(@Request() req: { user: { userId: string } }, @Param('id') archetypeId: string) {
     return this.archetypes.playArchetype(req.user.userId, archetypeId);
+  }
+
+  // POST /archetypes/play-artist — search for an artist and play their top tracks
+  @Post('play-artist')
+  playArtist(@Request() req: { user: { userId: string } }, @Body() body: { artistName: string }) {
+    return this.archetypes.playArtistForUser(req.user.userId, body.artistName);
   }
 }

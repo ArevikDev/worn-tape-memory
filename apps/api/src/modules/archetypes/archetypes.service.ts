@@ -286,4 +286,18 @@ export class ArchetypesService {
       throw new InternalServerErrorException(msg);
     }
   }
+
+  async playArtistForUser(
+    userId: string,
+    artistName: string,
+  ): Promise<{ playing: boolean; noDevice: boolean; spotifyUri: string; artistUrl: string }> {
+    const accessToken = await this.spotify.getValidAccessToken(this.db, userId);
+    try {
+      return await this.spotify.playArtist(accessToken, artistName);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not play artist';
+      this.logger.error(`playArtist failed for ${userId} / "${artistName}": ${msg}`);
+      throw new InternalServerErrorException(msg);
+    }
+  }
 }

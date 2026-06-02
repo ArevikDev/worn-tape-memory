@@ -20,6 +20,12 @@ export interface SpotifyProfile {
   images: { url: string }[];
 }
 
+interface SpotifyArtistResult {
+  id: string;
+  name: string;
+  external_urls: { spotify: string };
+}
+
 export interface SpotifyCurrentlyPlaying {
   is_playing: boolean;
   progress_ms: number;
@@ -123,6 +129,44 @@ export class SpotifyService {
     if (!response.ok) return null; // treat errors as "nothing playing"
 
     return response.json() as Promise<SpotifyCurrentlyPlaying>;
+  }
+
+  // Search for an artist by name, fetch their top tracks, and start playback.
+  // Returns spotifyUri (app deep link) and artistUrl (web fallback) for the caller.
+  async playArtist(
+    accessToken: string,
+    artistName: string,
+  ): Promise<{ playing: boolean; noDevice: boolean; spotifyUri: string; artistUrl: string }> {
+    const searchRes = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(artistName)}&type=artist&limit=1`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (!searchRes.ok) {
+      const err = await searchRes.text();
+      throw new Error(`Spotify artist search ${searchRes.status}: ${err.slice(0, 200)}`);
+    }
+
+    const searchData = (await searchRes.json()) as { artists: { items: SpotifyArtistResult[] } };
+    const artist = searchData.artists?.items?.[0];
+    if (!artist) return { playing: false, noDevice: false, spotifyUri: '', artistUrl: '' };
+
+    const spotifyUri = `spotify:artist:${artist.id}`;
+    const artistUrl =
+      artist.external_urls?.spotify ??
+      `https://open.spotify.com/search/${encodeURIComponent(artistName)}`;
+
+    const topRes = await fetch(
+      `https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=from_token`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (!topRes.ok) return { playing: false, noDevice: false, spotifyUri, artistUrl };
+
+    const topData = (await topRes.json()) as { tracks: { uri: string }[] };
+    const trackUris = topData.tracks.map((t) => t.uri).slice(0, 10);
+    if (trackUris.length === 0) return { playing: false, noDevice: false, spotifyUri, artistUrl };
+
+    const playing = await this.playTracks(accessToken, trackUris);
+    return { playing, noDevice: !playing, spotifyUri, artistUrl };
   }
 
   // Start immediate playback of track URIs on the user's active Spotify device.

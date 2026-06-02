@@ -129,7 +129,13 @@
             @if (a.topArtists && a.topArtists.length > 0) {
               <div class="flex flex-wrap gap-x-3 gap-y-1">
                 @for (artist of a.topArtists; track artist) {
-                  <span class="text-xs text-zinc-300 font-medium">{{ artist }}</span>
+                  <button
+                    (click)="playArtist(artist)"
+                    [disabled]="loadingArtist() === artist"
+                    class="text-xs font-medium transition-colors disabled:opacity-40 hover:underline underline-offset-2"
+                    [class]="playingArtist() === artist ? 'text-green-400' : 'text-zinc-300 hover:text-white'">
+                    {{ playingArtist() === artist ? '♪ ' + artist : artist }}
+                  </button>
                 }
               </div>
             }
@@ -139,7 +145,13 @@
               <div class="flex flex-wrap gap-x-2 gap-y-1 items-center">
                 <span class="text-xs text-zinc-600">if you like this →</span>
                 @for (artist of a.similarArtists; track artist) {
-                  <span class="text-xs text-zinc-500">{{ artist }}</span>
+                  <button
+                    (click)="playArtist(artist)"
+                    [disabled]="loadingArtist() === artist"
+                    class="text-xs transition-colors disabled:opacity-40 hover:underline underline-offset-2"
+                    [class]="playingArtist() === artist ? 'text-green-400' : 'text-zinc-500 hover:text-zinc-300'">
+                    {{ playingArtist() === artist ? '♪ ' + artist : artist }}
+                  </button>
                 }
               </div>
             }

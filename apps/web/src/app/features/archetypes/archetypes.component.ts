@@ -47,6 +47,8 @@ export class ArchetypesComponent implements OnInit {
   protected readonly detectError = signal<string | null>(null);
   protected readonly exportingId = signal<string | null>(null);
   protected readonly playingId = signal<string | null>(null);
+  protected readonly loadingArtist = signal<string | null>(null);
+  protected readonly playingArtist = signal<string | null>(null);
 
   protected readonly DAYS = DAYS;
 
@@ -148,6 +150,39 @@ export class ArchetypesComponent implements OnInit {
       this.detectError.set(msg);
     } finally {
       this.exportingId.set(null);
+    }
+  }
+
+  async playArtist(name: string): Promise<void> {
+    this.loadingArtist.set(name);
+    this.detectError.set(null);
+    try {
+      const result = await firstValueFrom(
+        this.http.post<{ playing: boolean; noDevice: boolean; spotifyUri: string; artistUrl: string }>(
+          `${API_BASE}/archetypes/play-artist`,
+          { artistName: name },
+          { withCredentials: true },
+        ),
+      );
+      if (result.noDevice) {
+   
+        const target = result.spotifyUri || result.artistUrl;
+        if (target) window.open(target, '_blank');
+        this.detectError.set('Open Spotify on any device first, then try again.');
+      } else if (!result.playing && result.spotifyUri) {
+        window.open(result.spotifyUri, '_blank');
+      } else {
+        this.playingArtist.set(name);
+        setTimeout(() => this.playingArtist.set(null), 3000);
+      }
+    } catch (err: unknown) {
+      const msg =
+        err instanceof HttpErrorResponse
+          ? (err.error?.message ?? err.message)
+          : 'Could not play artist. Try again.';
+      this.detectError.set(msg);
+    } finally {
+      this.loadingArtist.set(null);
     }
   }
 
