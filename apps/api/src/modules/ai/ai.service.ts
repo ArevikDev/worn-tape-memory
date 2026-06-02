@@ -15,6 +15,7 @@ export interface ArchetypeNamingResult {
   description: string;
   color: string;
   icon: string;
+  style_tags: string[];
 }
 
 export interface TrackEnrichmentInput {
@@ -34,14 +35,42 @@ export interface TrackEnrichmentResult {
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private readonly model;
+
+  // Both keys are optional — the service tries Groq first, Gemini second
+  private readonly groqApiKey: string | null;
+  private readonly geminiModel: ReturnType<
+    InstanceType<typeof GoogleGenerativeAI>['getGenerativeModel']
+  > | null;
 
   constructor(private readonly config: ConfigService) {
-    const genAI = new GoogleGenerativeAI(config.getOrThrow('GEMINI_API_KEY'));
-    this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    this.groqApiKey = config.get<string>('GROQ_API_KEY') ?? null;
+
+    const geminiKey = config.get<string>('GEMINI_API_KEY');
+    if (geminiKey) {
+      const genAI = new GoogleGenerativeAI(geminiKey);
+      this.geminiModel = genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash-lite',
+      });
+    } else {
+      this.geminiModel = null;
+    }
+
+    const providers = [
+      this.groqApiKey ? 'Groq' : null,
+      this.geminiModel ? 'Gemini' : null,
+    ]
+      .filter(Boolean)
+      .join(' → ');
+    this.logger.log(
+      `AI providers: ${providers || 'none (rule-based fallback only)'}`,
+    );
   }
 
-  async enrichTrack(input: TrackEnrichmentInput): Promise<TrackEnrichmentResult> {
+  // ── Public API ───────────────────────────────────────────────────────────
+
+  async enrichTrack(
+    input: TrackEnrichmentInput,
+  ): Promise<TrackEnrichmentResult> {
     const yearStr = input.year ? ` (${input.year})` : '';
     const prompt = `You are a music taxonomist. Given this track, return ONLY a JSON object — no prose, no markdown.
 
@@ -51,26 +80,24 @@ Album: "${input.album}"${yearStr}
 Return:
 {
   "mood_tags": [3-5 evocative one-word tags like "melancholy", "patient", "euphoric"],
-  "mood_category": one of ["melancholy", "warm", "peak", "hypnotic", "euphoric", "contemplative"],
+  "mood_category": one of ["melancholy", "warm", "peak", "hypnotic", "euphoric", "contemplative", "nostalgic", "dreamy"],
   "energy": number 0-10 (10 = peak-time techno, 1 = ambient drone),
   "vibe_vector": array of exactly 8 numbers from -1 to 1 representing the track's position in vibe space
 }`;
 
-    const result = await this.model.generateContent(prompt);
-    const raw = result.response.text().trim();
-
-    // Strip markdown code fences if Gemini wraps the response
+    const raw = await this.generateText(prompt);
     const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
 
     let parsed: TrackEnrichmentResult;
     try {
       parsed = JSON.parse(cleaned) as TrackEnrichmentResult;
     } catch {
-      this.logger.error(`Failed to parse Gemini response for "${input.name}": ${raw}`);
-      throw new Error('Gemini returned invalid JSON');
+      this.logger.error(
+        `Failed to parse AI response for "${input.name}": ${raw}`,
+      );
+      throw new Error('AI returned invalid JSON for enrichment');
     }
 
-    // Basic validation
     if (
       !Array.isArray(parsed.mood_tags) ||
       typeof parsed.mood_category !== 'string' ||
@@ -78,8 +105,10 @@ Return:
       !Array.isArray(parsed.vibe_vector) ||
       parsed.vibe_vector.length !== 8
     ) {
-      this.logger.error(`Gemini response missing fields for "${input.name}": ${cleaned}`);
-      throw new Error('Gemini response missing required fields');
+      this.logger.error(
+        `AI response missing fields for "${input.name}": ${cleaned}`,
+      );
+      throw new Error('AI response missing required fields');
     }
 
     return parsed;
@@ -104,47 +133,212 @@ Return:
           ? '12pm'
           : `${input.peakHour - 12}pm`;
 
-    const prompt = `You are a perceptive music observer. Below is a cluster of one listener's plays. Generate a persona.
+    const prompt = `You are a sharp music writer. A listener has a distinct listening cluster. Describe it like a good friend who's noticed the habit — grounded, specific, a little wry.
 
-Cluster summary:
+Cluster:
 - Peak hour: ${hourLabel}
 - Peak day: ${days[input.peakDayOfWeek]}
 - Dominant moods: ${input.dominantMoods.join(', ')}
 - Top tracks: ${input.topTracks.slice(0, 5).join('; ')}
 - Total plays: ${input.playCount}
 
+RULES for the description — one sentence, second person:
+- Name the actual genre, sound, or texture — not abstract feelings
+- Reference the time/day if it's distinctive
+- BANNED: "find solace", "as if", "mirror", "amplify", "journey", "cathartic", "soundscape", "speaks to you"
+- Good: "Hard techno and industrial past midnight on Saturdays — you're not going to bed yet."
+- Good: "Jangly guitars on Monday lunches, the kind that make the afternoon feel manageable."
+- Good: "Slow drone and ambient stuff on Sunday nights, volume low, lights off."
+- Bad: "You find solace in the dark soundscapes that fuel your introspection."
+
 Return JSON only — no prose, no markdown:
 {
-  "name": "The [3-6 words, evocative, specific — not generic vibes]",
-  "description": "[1-2 sentences in second person, like 'sad indie played late after a heavy day']",
-  "color": "#hex (a single color that captures the mood)",
-  "icon": "tabler-icon-name (e.g. 'moon', 'coffee', 'bolt', 'vinyl', 'headphones', 'music', 'flame', 'wave-sine', 'cloud', 'star')"
-}
+  "name": "The [2-5 words — a feeling, time, or habit, NOT a genre label or job title. Good: '4am Slow Rewind', 'Tuesday Voltage Drop', 'Late Sunday Unravel', 'Midnight Tape Loop'. BANNED: 'Saturday Downtempo Fan', 'Monday Noon Dreamer', 'Sunday Night Contemplator', anything ending in Fan/Listener/Lover/Dreamer]",
+  "description": "[one grounded sentence as above]",
+  "color": "#hex",
+  "icon": "one word from: moon coffee bolt vinyl headphones music flame cloud star sun heart",
+  "style_tags": ["2-4 genre/style keywords, lowercase, no # prefix, e.g. darkwave, trip-hop, minimal techno, post-punk"]
+}`;
 
-Examples of good names: "The 11pm wound-licker", "The Sunday morning archivist", "The Thursday DJ".
-Examples of bad names: "Late night vibes", "Sad music lover", "Energy boost playlist".`;
-
-    const result = await this.model.generateContent(prompt);
-    const raw = result.response.text().trim();
-    const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-
-    let parsed: ArchetypeNamingResult;
     try {
-      parsed = JSON.parse(cleaned) as ArchetypeNamingResult;
-    } catch {
-      this.logger.error(`Failed to parse Gemini archetype response: ${raw}`);
-      throw new Error('Gemini returned invalid JSON for archetype naming');
+      const raw = await this.generateText(prompt);
+      const cleaned = raw
+        .replace(/^```(?:json)?\n?/, '')
+        .replace(/\n?```$/, '');
+
+      let parsed: ArchetypeNamingResult;
+      try {
+        parsed = JSON.parse(cleaned) as ArchetypeNamingResult;
+      } catch {
+        this.logger.warn(
+          `AI returned unparseable JSON for archetype, using fallback`,
+        );
+        return this.nameArchetypeFallback(input);
+      }
+
+      if (
+        typeof parsed.name !== 'string' ||
+        typeof parsed.description !== 'string' ||
+        typeof parsed.color !== 'string' ||
+        typeof parsed.icon !== 'string'
+      ) {
+        return this.nameArchetypeFallback(input);
+      }
+
+      // style_tags is optional — default to empty if AI omits it
+      if (!Array.isArray(parsed.style_tags)) parsed.style_tags = [];
+
+      return parsed;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `All AI providers failed for naming, using fallback: ${msg.slice(0, 120)}`,
+      );
+      return this.nameArchetypeFallback(input);
+    }
+  }
+
+  // ── Core text generation: Groq → Gemini ─────────────────────────────────
+
+  private async generateText(prompt: string): Promise<string> {
+    if (this.groqApiKey) {
+      try {
+        return await this.callGroq(prompt);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Groq failed, trying Gemini: ${msg.slice(0, 100)}`);
+      }
     }
 
-    if (
-      typeof parsed.name !== 'string' ||
-      typeof parsed.description !== 'string' ||
-      typeof parsed.color !== 'string' ||
-      typeof parsed.icon !== 'string'
-    ) {
-      throw new Error('Gemini archetype response missing required fields');
+    if (this.geminiModel) {
+      const result = await this.geminiModel.generateContent(prompt);
+      return result.response.text().trim();
     }
 
-    return parsed;
+    throw new Error(
+      'No AI provider configured (set GROQ_API_KEY or GEMINI_API_KEY)',
+    );
+  }
+
+  private async callGroq(prompt: string): Promise<string> {
+    const response = await fetch(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 512,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Groq ${response.status}: ${text.slice(0, 200)}`);
+    }
+
+    const data = (await response.json()) as {
+      choices: Array<{ message: { content: string } }>;
+    };
+    return data.choices[0].message.content.trim();
+  }
+
+  // ── Rule-based fallback (no AI required) ────────────────────────────────
+
+  private nameArchetypeFallback(
+    input: ArchetypeNamingInput,
+  ): ArchetypeNamingResult {
+    const days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const hourLabel =
+      input.peakHour < 12
+        ? `${input.peakHour === 0 ? 12 : input.peakHour}am`
+        : input.peakHour === 12
+          ? '12pm'
+          : `${input.peakHour - 12}pm`;
+
+    const mood = input.dominantMoods[0] ?? 'eclectic';
+
+    const MOOD_CONFIGS: Record<
+      string,
+      { tag: string; color: string; icon: string; desc: string }
+    > = {
+      melancholy: {
+        tag: 'wound-licker',
+        color: '#6366f1',
+        icon: 'moon',
+        desc: 'Sad, slow music for processing the day.',
+      },
+      warm: {
+        tag: 'comfort seeker',
+        color: '#f59e0b',
+        icon: 'coffee',
+        desc: 'Familiar warmth. The playlist that feels like home.',
+      },
+      peak: {
+        tag: 'momentum builder',
+        color: '#ef4444',
+        icon: 'bolt',
+        desc: 'High-energy runs. You needed to move.',
+      },
+      hypnotic: {
+        tag: 'trance rider',
+        color: '#8b5cf6',
+        icon: 'wave-sine',
+        desc: 'Repetitive, deep, locked-in. You were somewhere else.',
+      },
+      euphoric: {
+        tag: 'joy chaser',
+        color: '#10b981',
+        icon: 'flame',
+        desc: 'Pure uplift. The music that made you feel it.',
+      },
+      contemplative: {
+        tag: 'slow thinker',
+        color: '#64748b',
+        icon: 'cloud',
+        desc: 'Patient and introspective. You were sitting with something.',
+      },
+      nostalgic: {
+        tag: 'time traveler',
+        color: '#c084fc',
+        icon: 'vinyl',
+        desc: 'Older sounds, music that pulls you back somewhere.',
+      },
+      dreamy: {
+        tag: 'cloud drifter',
+        color: '#38bdf8',
+        icon: 'star',
+        desc: 'Hazy, soft, unhurried. You were between here and elsewhere.',
+      },
+    };
+
+    const cfg = MOOD_CONFIGS[mood] ?? {
+      tag: 'listener',
+      color: '#71717a',
+      icon: 'headphones',
+      desc: 'A distinct corner of your listening.',
+    };
+
+    return {
+      name: `The ${hourLabel} ${cfg.tag}`,
+      description: `${cfg.desc} Peaks on ${days[input.peakDayOfWeek]}s around ${hourLabel}. ${input.playCount} plays.`,
+      color: cfg.color,
+      icon: cfg.icon,
+      style_tags: [],
+    };
   }
 }

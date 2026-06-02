@@ -13,6 +13,8 @@ export interface Archetype {
   lastAppearedAt: string;
   detectedAt: string;
   spotifyPlaylistId: string | null;
+  styleTags: string[] | null;
+  topArtists: string[] | null;
 }
 
 export type MoodCategory =
@@ -21,4 +23,6 @@ export type MoodCategory =
   | 'peak'
   | 'hypnotic'
   | 'euphoric'
-  | 'contemplative';
+  | 'contemplative'
+  | 'nostalgic'
+  | 'dreamy';

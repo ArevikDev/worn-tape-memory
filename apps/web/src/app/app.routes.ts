@@ -21,6 +21,12 @@ export const routes: Routes = [
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
   {
+    path: 'archetypes',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/archetypes/archetypes.component').then((m) => m.ArchetypesComponent),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

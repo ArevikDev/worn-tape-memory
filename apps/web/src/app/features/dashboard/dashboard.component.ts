@@ -1,60 +1,38 @@
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
-import type { AuthUser, UserStats, NowPlaying } from '@worn-tape-memory/shared';
+import { NavShellComponent } from '../../shared/components/nav-shell.component';
+import type { UserStats, NowPlaying } from '@worn-tape-memory/shared';
 
 const API_BASE = 'http://127.0.0.1:3000';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
+  imports: [NavShellComponent],
   template: `
-    <div class="min-h-screen bg-zinc-950 text-white">
+    <app-nav-shell>
 
-      <!-- Header -->
-      <header class="border-b border-zinc-800 px-6 py-4">
-        <div class="max-w-5xl mx-auto flex items-center justify-between">
-          <span class="text-zinc-400 text-sm font-medium tracking-widest uppercase">
-            Worn Tape Memory
-          </span>
-          <div class="flex items-center gap-4">
-            @if (user()) {
-              <div class="flex items-center gap-2">
-                @if (user()!.avatarUrl) {
-                  <img [src]="user()!.avatarUrl" [alt]="user()!.displayName ?? ''"
-                    class="w-6 h-6 rounded-full" />
-                }
-                <span class="text-zinc-400 text-sm hidden sm:block">{{ user()!.displayName }}</span>
-              </div>
-            }
+      <!-- Sync button in header -->
+      <div headerActions>
+        <button (click)="sync()" [disabled]="syncing()" title="Sync listens"
+          class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-200
+                 disabled:opacity-40 transition-colors text-sm">
+          <svg class="w-4 h-4" [class.animate-spin]="syncing()"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0
+                     0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round"
+                     stroke-linejoin="round"/>
+          </svg>
+          @if (syncResult() !== null) {
+            <span class="text-xs">
+              {{ syncResult() === 0 ? 'up to date' : '+' + syncResult() }}
+            </span>
+          }
+        </button>
+      </div>
 
-            <!-- Sync button -->
-            <button (click)="sync()" [disabled]="syncing()" title="Sync listens"
-              class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-200
-                     disabled:opacity-40 transition-colors text-sm">
-              <svg class="w-4 h-4" [class.animate-spin]="syncing()"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0
-                         0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round"
-                         stroke-linejoin="round"/>
-              </svg>
-              @if (syncResult() !== null) {
-                <span class="text-xs">
-                  {{ syncResult() === 0 ? 'up to date' : '+' + syncResult() }}
-                </span>
-              }
-            </button>
-
-            <button (click)="logout()"
-              class="text-zinc-600 hover:text-zinc-400 text-sm transition-colors">
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
-
+      <!-- Main content -->
       <main class="max-w-5xl mx-auto px-6 py-8 space-y-6">
 
         <!-- Now Playing -->
@@ -75,8 +53,8 @@ const API_BASE = 'http://127.0.0.1:3000';
           </div>
         }
 
-        <!-- Stats strip -->
         @if (stats(); as s) {
+          <!-- Stats strip -->
           <div class="grid grid-cols-3 gap-3 sm:gap-4">
             <div class="bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800">
               <p class="text-2xl sm:text-3xl font-bold text-white tabular-nums">{{ s.totalListens }}</p>
@@ -107,7 +85,8 @@ const API_BASE = 'http://127.0.0.1:3000';
               } @else {
                 <div class="space-y-0.5">
                   @for (track of s.topTracks; track track.spotifyUri) {
-                    <div class="flex items-center gap-3 py-1.5 rounded-lg hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
+                    <div class="flex items-center gap-3 py-1.5 rounded-lg
+                                hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
                       @if (track.albumImageUrl) {
                         <img [src]="track.albumImageUrl" alt="" class="w-8 h-8 rounded flex-shrink-0" />
                       } @else {
@@ -117,7 +96,9 @@ const API_BASE = 'http://127.0.0.1:3000';
                         <p class="text-white text-sm truncate leading-snug">{{ track.name }}</p>
                         <p class="text-zinc-500 text-xs truncate">{{ track.artistName }}</p>
                       </div>
-                      <span class="text-zinc-600 text-xs flex-shrink-0 tabular-nums">{{ track.playCount }}×</span>
+                      <span class="text-zinc-600 text-xs flex-shrink-0 tabular-nums">
+                        {{ track.playCount }}×
+                      </span>
                     </div>
                   }
                 </div>
@@ -136,10 +117,15 @@ const API_BASE = 'http://127.0.0.1:3000';
               } @else {
                 <div class="space-y-0.5">
                   @for (artist of s.topArtists; track artist.artistName; let i = $index) {
-                    <div class="flex items-center gap-3 py-1.5 rounded-lg hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
-                      <span class="text-zinc-700 text-xs w-4 text-right flex-shrink-0 tabular-nums">{{ i + 1 }}</span>
+                    <div class="flex items-center gap-3 py-1.5 rounded-lg
+                                hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
+                      <span class="text-zinc-700 text-xs w-4 text-right flex-shrink-0 tabular-nums">
+                        {{ i + 1 }}
+                      </span>
                       <p class="text-white text-sm flex-1 truncate">{{ artist.artistName }}</p>
-                      <span class="text-zinc-600 text-xs flex-shrink-0 tabular-nums">{{ artist.playCount }}×</span>
+                      <span class="text-zinc-600 text-xs flex-shrink-0 tabular-nums">
+                        {{ artist.playCount }}×
+                      </span>
                     </div>
                   }
                 </div>
@@ -157,7 +143,8 @@ const API_BASE = 'http://127.0.0.1:3000';
             } @else {
               <div class="space-y-0.5">
                 @for (listen of s.recentListens; track listen.playedAt) {
-                  <div class="flex items-center gap-3 py-1.5 rounded-lg hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
+                  <div class="flex items-center gap-3 py-1.5 rounded-lg
+                              hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
                     @if (listen.albumImageUrl) {
                       <img [src]="listen.albumImageUrl" alt="" class="w-8 h-8 rounded flex-shrink-0" />
                     } @else {
@@ -177,7 +164,7 @@ const API_BASE = 'http://127.0.0.1:3000';
           </div>
 
         } @else {
-          <!-- Skeleton loading -->
+          <!-- Skeleton -->
           <div class="grid grid-cols-3 gap-3 sm:gap-4">
             @for (i of [1, 2, 3]; track i) {
               <div class="bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800 space-y-2">
@@ -186,7 +173,6 @@ const API_BASE = 'http://127.0.0.1:3000';
               </div>
             }
           </div>
-
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             @for (col of [1, 2]; track col) {
               <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800 space-y-3">
@@ -203,7 +189,6 @@ const API_BASE = 'http://127.0.0.1:3000';
               </div>
             }
           </div>
-
           <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800 space-y-3">
             <div class="h-3 w-24 bg-zinc-800 rounded animate-pulse mb-4"></div>
             @for (row of [1, 2, 3, 4, 5, 6, 7, 8]; track row) {
@@ -220,27 +205,20 @@ const API_BASE = 'http://127.0.0.1:3000';
         }
 
       </main>
-    </div>
+    </app-nav-shell>
   `,
 })
 export class DashboardComponent implements OnInit {
-  private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly user = signal<AuthUser | null>(null);
   protected readonly stats = signal<UserStats | null>(null);
   protected readonly nowPlaying = signal<NowPlaying | null>(null);
   protected readonly syncing = signal(false);
   protected readonly syncResult = signal<number | null>(null);
 
   async ngOnInit(): Promise<void> {
-    const result = await this.auth.loadCurrentUser();
-    if (result) this.user.set(result);
-
     await Promise.all([this.loadStats(), this.loadNowPlaying()]);
-
     const interval = setInterval(() => this.loadNowPlaying(), 10_000);
     this.destroyRef.onDestroy(() => clearInterval(interval));
   }
@@ -276,16 +254,10 @@ export class DashboardComponent implements OnInit {
       );
       this.syncResult.set(result.inserted);
       await this.loadStats();
-      // Auto-dismiss sync feedback after 3s
       setTimeout(() => this.syncResult.set(null), 3_000);
     } finally {
       this.syncing.set(false);
     }
-  }
-
-  async logout(): Promise<void> {
-    await this.auth.logout();
-    await this.router.navigate(['/']);
   }
 
   timeAgo(isoString: string): string {

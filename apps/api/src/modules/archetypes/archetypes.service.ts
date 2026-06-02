@@ -1,17 +1,12 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { kmeans } from 'ml-kmeans';
-import { eq, isNotNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { DrizzleClient } from '../../db';
 import { listens, tracks, archetypes } from '../../db/schema';
 import { DRIZZLE_CLIENT } from '../auth/auth.service';
 import { AiService } from '../ai/ai.service';
 
-// Feature vector dimensions:
-// [0] hour / 23          (0–1)
-// [1] dayOfWeek / 6      (0–1)
-// [2] energy / 10        (0–1, 0 if not enriched)
-// [3..10] vibe_vector    (8 dims, –1 to 1)
-const FEATURE_DIM = 11;
+// Feature vector: [hour/23, dayOfWeek/6, energy/10, ...vibeVector(8)]
 const MOOD_CATEGORIES = [
   'melancholy',
   'warm',
@@ -32,7 +27,9 @@ export class ArchetypesService {
 
   // ── Core detection ───────────────────────────────────────────────────────
 
-  async detectArchetypesForUser(userId: string): Promise<{ detected: number }> {
+  async detectArchetypesForUser(
+    userId: string,
+  ): Promise<{ detected: number; listenCount: number }> {
     // 1. Fetch all listens with their enriched track data
     const rawRows = await this.db
       .select({
@@ -54,12 +51,12 @@ export class ArchetypesService {
         r.trackName != null && r.artistName != null,
     );
 
-    // Need at least 9 listens to cluster into 3 groups
-    if (rows.length < 9) {
+    // Need at least 3 listens (one per cluster minimum)
+    if (rows.length < 3) {
       this.logger.log(
         `Not enough listens to detect archetypes for user ${userId} (${rows.length} listens)`,
       );
-      return { detected: 0 };
+      return { detected: 0, listenCount: rows.length };
     }
 
     // 2. Build feature vectors
@@ -75,8 +72,8 @@ export class ArchetypesService {
       return [hour, dow, energy, ...vibe];
     });
 
-    // 3. Determine k (3–5 clusters depending on data volume)
-    const k = rows.length >= 200 ? 5 : rows.length >= 80 ? 4 : 3;
+    // 3. Determine k — more personas = more interesting
+    const k = rows.length >= 100 ? 6 : rows.length >= 60 ? 5 : rows.length >= 40 ? 4 : 3;
 
     const result = kmeans(features, k, { maxIterations: 100 });
 
@@ -89,8 +86,13 @@ export class ArchetypesService {
 
     // 5. For each cluster — compute stats, call Gemini, upsert
     let detected = 0;
+    let lastError: unknown;
 
-    for (const [clusterIdx, clusterRows] of clusters) {
+    const clusterEntries = [...clusters.entries()];
+    for (let i = 0; i < clusterEntries.length; i++) {
+      const [clusterIdx, clusterRows] = clusterEntries[i];
+      // Small pause between Gemini calls to stay under per-minute rate limits
+      if (i > 0) await new Promise((r) => setTimeout(r, 1_000));
       try {
         const archetype = await this.buildAndSaveArchetype(
           userId,
@@ -100,12 +102,22 @@ export class ArchetypesService {
         );
         if (archetype) detected++;
       } catch (err) {
-        this.logger.error(`Failed to build archetype for cluster ${clusterIdx}: ${String(err)}`);
+        lastError = err;
+        this.logger.error(
+          `Failed to build archetype for cluster ${clusterIdx}: ${String(err)}`,
+          err instanceof Error ? err.stack : undefined,
+        );
       }
     }
 
+    // If every cluster failed, surface the real reason instead of returning 0
+    if (detected === 0 && lastError !== undefined) {
+      const msg = lastError instanceof Error ? lastError.message : String(lastError);
+      throw new InternalServerErrorException(`Archetype detection failed: ${msg}`);
+    }
+
     this.logger.log(`Detected ${detected} archetypes for user ${userId}`);
-    return { detected };
+    return { detected, listenCount: rows.length };
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -165,6 +177,16 @@ export class ArchetypesService {
     const topTrackIds = topByFreq.map(([id]) => id);
     const topTrackLabels = topByFreq.map(([, v]) => v.label);
 
+    // Top artists (by play count in this cluster)
+    const artistCounts = new Map<string, number>();
+    rows.forEach((r) => {
+      artistCounts.set(r.artistName, (artistCounts.get(r.artistName) ?? 0) + 1);
+    });
+    const topArtists = [...artistCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([name]) => name);
+
     // Last appeared
     const lastAppearedAt = new Date(
       Math.max(...rows.map((r) => new Date(r.playedAt).getTime())),
@@ -196,6 +218,8 @@ export class ArchetypesService {
         trackIds: topTrackIds,
         playCount: rows.length,
         lastAppearedAt,
+        styleTags: naming.style_tags ?? [],
+        topArtists,
         centroid,
       })
       .returning({ id: archetypes.id });

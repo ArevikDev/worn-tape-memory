@@ -26,7 +26,8 @@ export const archetypes = pgTable('archetypes', {
   lastAppearedAt: timestamp('last_appeared_at').notNull(),
   detectedAt: timestamp('detected_at').default(sql`now()`).notNull(),
   spotifyPlaylistId: text('spotify_playlist_id'),
-  // Centroid of the cluster in vibe space (for future similarity queries)
+  styleTags: text('style_tags').array(),
+  topArtists: text('top_artists').array(),
   centroid: real('centroid').array(),
 });
 
