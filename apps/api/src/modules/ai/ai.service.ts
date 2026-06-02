@@ -74,7 +74,7 @@ Album: "${input.album}"${yearStr}
 Return:
 {
   "mood_tags": [3-5 evocative one-word tags like "melancholy", "patient", "euphoric"],
-  "mood_category": one of ["melancholy", "warm", "peak", "hypnotic", "euphoric", "contemplative", "nostalgic", "dreamy"],
+  "mood_category": one of ["melancholy", "warm", "peak", "hypnotic", "euphoric", "contemplative", "nostalgic", "dreamy", "tense", "serene", "raw", "bittersweet", "electric", "tender", "brooding"],
   "energy": number 0-10 (10 = peak-time techno, 1 = ambient drone),
   "vibe_vector": array of exactly 8 numbers from -1 to 1 representing the track's position in vibe space
 }`;
@@ -282,6 +282,48 @@ Return JSON only — no prose, no markdown:
           color: '#38bdf8',
           icon: 'star',
           desc: 'Hazy, soft, unhurried. You were between here and elsewhere.',
+        },
+        tense: {
+          tag: 'edge walker',
+          color: '#f97316',
+          icon: 'bolt',
+          desc: 'Anxious energy, something building. You needed it to push through.',
+        },
+        serene: {
+          tag: 'still point',
+          color: '#34d399',
+          icon: 'leaf',
+          desc: 'Calm and clear. Nowhere to be, nothing to prove.',
+        },
+        raw: {
+          tag: 'open nerve',
+          color: '#dc2626',
+          icon: 'flame',
+          desc: 'Unfiltered and visceral. You let it hit.',
+        },
+        bittersweet: {
+          tag: 'in-between',
+          color: '#a78bfa',
+          icon: 'heart',
+          desc: 'Beautiful and a little sad. The feeling has no clean name.',
+        },
+        electric: {
+          tag: 'live wire',
+          color: '#facc15',
+          icon: 'zap',
+          desc: 'Charged and alive. Something broke open.',
+        },
+        tender: {
+          tag: 'soft hour',
+          color: '#fb7185',
+          icon: 'feather',
+          desc: 'Gentle and close. Low volume, high feeling.',
+        },
+        brooding: {
+          tag: 'deep current',
+          color: '#475569',
+          icon: 'moon',
+          desc: 'Heavy and atmospheric. You were inside your own head.',
         },
       };
 

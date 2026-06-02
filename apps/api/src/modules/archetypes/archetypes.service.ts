@@ -21,6 +21,15 @@ const MOOD_CATEGORIES = [
   'hypnotic',
   'euphoric',
   'contemplative',
+  'nostalgic',
+  'dreamy',
+  'tense',
+  'serene',
+  'raw',
+  'bittersweet',
+  'electric',
+  'tender',
+  'brooding',
 ] as const;
 
 @Injectable()
@@ -109,7 +118,9 @@ export class ArchetypesService {
           clusterRows,
           result.centroids[clusterIdx],
         );
-        if (archetype) detected++;
+        if (archetype) {
+          detected++;
+        }
       } catch (err) {
         lastError = err;
         this.logger.error(
@@ -236,7 +247,7 @@ export class ArchetypesService {
         similarArtists: naming.similar_artists ?? [],
         centroid,
       })
-      .returning({ id: archetypes.id });
+      .returning({ id: archetypes.id, name: archetypes.name });
 
     return saved;
   }
