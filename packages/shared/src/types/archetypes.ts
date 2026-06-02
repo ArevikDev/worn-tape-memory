@@ -15,6 +15,8 @@ export interface Archetype {
   spotifyPlaylistId: string | null;
   styleTags: string[] | null;
   topArtists: string[] | null;
+  topTrackImageUrls: string[] | null;
+  similarArtists: string[] | null;
 }
 
 export type MoodCategory =

@@ -78,7 +78,9 @@ export class SpotifyService {
   }
 
   // Refresh access token proactively — call when expires_at < now + 60s
-  async refreshAccessToken(encryptedRefreshToken: string): Promise<SpotifyTokenResponse> {
+  async refreshAccessToken(
+    encryptedRefreshToken: string,
+  ): Promise<SpotifyTokenResponse> {
     const refreshToken = this.crypto.decrypt(encryptedRefreshToken);
 
     const body = new URLSearchParams({
@@ -117,7 +119,9 @@ export class SpotifyService {
   }
 
   // Returns null if nothing is currently playing (Spotify returns 204)
-  async getCurrentlyPlaying(accessToken: string): Promise<SpotifyCurrentlyPlaying | null> {
+  async getCurrentlyPlaying(
+    accessToken: string,
+  ): Promise<SpotifyCurrentlyPlaying | null> {
     const response = await fetch(
       'https://api.spotify.com/v1/me/player/currently-playing',
       { headers: { Authorization: `Bearer ${accessToken}` } },
@@ -127,6 +131,27 @@ export class SpotifyService {
     if (!response.ok) return null; // treat errors as "nothing playing"
 
     return response.json() as Promise<SpotifyCurrentlyPlaying>;
+  }
+
+  // Start immediate playback of track URIs on the user's active Spotify device.
+  // Returns false when no active device exists (user needs to open Spotify first).
+  async playTracks(accessToken: string, uris: string[]): Promise<boolean> {
+    const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ uris }),
+    });
+
+    if (response.status === 204 || response.status === 202) return true;
+    if (response.status === 404) return false; // no active device
+
+    const err = await response.text();
+    throw new Error(
+      `Spotify playTracks ${response.status}: ${err.slice(0, 200)}`,
+    );
   }
 
   // Refreshes proactively if the token expires within 60 seconds.

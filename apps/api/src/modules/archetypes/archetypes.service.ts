@@ -1,10 +1,17 @@
-import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { kmeans } from 'ml-kmeans';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { DrizzleClient } from '../../db';
 import { listens, tracks, archetypes } from '../../db/schema';
 import { DRIZZLE_CLIENT } from '../auth/auth.service';
 import { AiService } from '../ai/ai.service';
+import { SpotifyService } from '../spotify/spotify.service';
 
 // Feature vector: [hour/23, dayOfWeek/6, energy/10, ...vibeVector(8)]
 const MOOD_CATEGORIES = [
@@ -23,6 +30,7 @@ export class ArchetypesService {
   constructor(
     @Inject(DRIZZLE_CLIENT) private readonly db: DrizzleClient,
     private readonly ai: AiService,
+    private readonly spotify: SpotifyService,
   ) {}
 
   // ── Core detection ───────────────────────────────────────────────────────
@@ -37,6 +45,7 @@ export class ArchetypesService {
         spotifyTrackId: listens.spotifyTrackId,
         trackName: tracks.name,
         artistName: tracks.artistName,
+        albumImageUrl: tracks.albumImageUrl,
         energy: tracks.energy,
         moodCategory: tracks.moodCategory,
         vibeVector: tracks.vibeVector,
@@ -68,7 +77,7 @@ export class ArchetypesService {
       const vibe =
         r.vibeVector && r.vibeVector.length === 8
           ? r.vibeVector
-          : new Array(8).fill(0) as number[];
+          : (new Array(8).fill(0) as number[]);
       return [hour, dow, energy, ...vibe];
     });
 
@@ -91,7 +100,7 @@ export class ArchetypesService {
     const clusterEntries = [...clusters.entries()];
     for (let i = 0; i < clusterEntries.length; i++) {
       const [clusterIdx, clusterRows] = clusterEntries[i];
-      // Small pause between Gemini calls to stay under per-minute rate limits
+      // Small pause between AI calls to stay under per-minute rate limits
       if (i > 0) await new Promise((r) => setTimeout(r, 1_000));
       try {
         const archetype = await this.buildAndSaveArchetype(
@@ -110,7 +119,6 @@ export class ArchetypesService {
       }
     }
 
-    // If every cluster failed, surface the real reason instead of returning 0
     if (detected === 0 && lastError !== undefined) {
       const msg = lastError instanceof Error ? lastError.message : String(lastError);
       throw new InternalServerErrorException(`Archetype detection failed: ${msg}`);
@@ -130,6 +138,7 @@ export class ArchetypesService {
       spotifyTrackId: string;
       trackName: string;
       artistName: string;
+      albumImageUrl: string | null | undefined;
       energy: number | null;
       moodCategory: string | null;
       vibeVector: number[] | null;
@@ -160,15 +169,22 @@ export class ArchetypesService {
       sortedMoods[0] ??
       (MOOD_CATEGORIES[Math.floor(Math.random() * MOOD_CATEGORIES.length)] as string);
 
-    // Top tracks (by frequency)
-    const trackFreq = new Map<string, { count: number; label: string }>();
+    // Top tracks (by frequency) — also capture album image URL per track
+    const trackFreq = new Map<
+      string,
+      { count: number; label: string; imageUrl: string | null }
+    >();
     rows.forEach((r) => {
       const key = r.spotifyTrackId;
       const existing = trackFreq.get(key);
       if (existing) {
         existing.count++;
       } else {
-        trackFreq.set(key, { count: 1, label: `${r.trackName} by ${r.artistName}` });
+        trackFreq.set(key, {
+          count: 1,
+          label: `${r.trackName} by ${r.artistName}`,
+          imageUrl: r.albumImageUrl ?? null,
+        });
       }
     });
     const topByFreq = [...trackFreq.entries()]
@@ -176,6 +192,15 @@ export class ArchetypesService {
       .slice(0, 10);
     const topTrackIds = topByFreq.map(([id]) => id);
     const topTrackLabels = topByFreq.map(([, v]) => v.label);
+
+    // Deduplicated album image URLs for the top tracks (up to 3)
+    const topTrackImageUrls: string[] = [];
+    for (const [, v] of topByFreq) {
+      if (v.imageUrl && !topTrackImageUrls.includes(v.imageUrl)) {
+        topTrackImageUrls.push(v.imageUrl);
+        if (topTrackImageUrls.length === 3) break;
+      }
+    }
 
     // Top artists (by play count in this cluster)
     const artistCounts = new Map<string, number>();
@@ -192,7 +217,7 @@ export class ArchetypesService {
       Math.max(...rows.map((r) => new Date(r.playedAt).getTime())),
     );
 
-    // Call Gemini for name/description/color/icon
+    // Call AI for name/description/color/icon/style_tags/similar_artists
     const naming = await this.ai.nameArchetype({
       peakHour,
       peakDayOfWeek,
@@ -201,9 +226,6 @@ export class ArchetypesService {
       playCount: rows.length,
     });
 
-    // Upsert — match on userId + primaryMood + peakHour (same "slot" = same archetype)
-    // Simple strategy: delete old ones for this user, re-insert all fresh each run
-    // (We do a full replace per detection run — called infrequently)
     const [saved] = await this.db
       .insert(archetypes)
       .values({
@@ -220,6 +242,8 @@ export class ArchetypesService {
         lastAppearedAt,
         styleTags: naming.style_tags ?? [],
         topArtists,
+        topTrackImageUrls,
+        similarArtists: naming.similar_artists ?? [],
         centroid,
       })
       .returning({ id: archetypes.id });
@@ -241,5 +265,35 @@ export class ArchetypesService {
   async redetectForUser(userId: string): Promise<{ detected: number }> {
     await this.db.delete(archetypes).where(eq(archetypes.userId, userId));
     return this.detectArchetypesForUser(userId);
+  }
+
+  // ── Spotify playback ─────────────────────────────────────────────────────
+
+  async playArchetype(
+    userId: string,
+    archetypeId: string,
+  ): Promise<{ playing: boolean; noDevice: boolean }> {
+    const [archetype] = await this.db
+      .select()
+      .from(archetypes)
+      .where(and(eq(archetypes.id, archetypeId), eq(archetypes.userId, userId)));
+
+    if (!archetype) throw new NotFoundException('Archetype not found');
+
+    const accessToken = await this.spotify.getValidAccessToken(this.db, userId);
+
+    const trackUris = archetype.trackIds.map((id) => `spotify:track:${id}`);
+    if (trackUris.length === 0) {
+      throw new InternalServerErrorException('No tracks in this archetype');
+    }
+
+    try {
+      const playing = await this.spotify.playTracks(accessToken, trackUris);
+      return { playing, noDevice: !playing };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`playArchetype failed for ${userId}/${archetypeId}: ${msg}`);
+      throw new InternalServerErrorException(msg);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ArchetypesService } from './archetypes.service';
 
@@ -23,5 +23,14 @@ export class ArchetypesController {
   @Post('redetect')
   redetectMyArchetypes(@Request() req: { user: { userId: string } }) {
     return this.archetypes.redetectForUser(req.user.userId);
+  }
+
+  // POST /archetypes/:id/play — start immediate Spotify playback for this archetype
+  @Post(':id/play')
+  playArchetype(
+    @Request() req: { user: { userId: string } },
+    @Param('id') archetypeId: string,
+  ) {
+    return this.archetypes.playArchetype(req.user.userId, archetypeId);
   }
 }

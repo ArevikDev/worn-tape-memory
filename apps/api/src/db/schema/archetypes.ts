@@ -28,6 +28,8 @@ export const archetypes = pgTable('archetypes', {
   spotifyPlaylistId: text('spotify_playlist_id'),
   styleTags: text('style_tags').array(),
   topArtists: text('top_artists').array(),
+  topTrackImageUrls: text('top_track_image_urls').array(),
+  similarArtists: text('similar_artists').array(),
   centroid: real('centroid').array(),
 });
 

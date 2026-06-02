@@ -16,6 +16,7 @@ export interface ArchetypeNamingResult {
   color: string;
   icon: string;
   style_tags: string[];
+  similar_artists: string[];
 }
 
 export interface TrackEnrichmentInput {
@@ -157,7 +158,8 @@ Return JSON only — no prose, no markdown:
   "description": "[one grounded sentence as above]",
   "color": "#hex",
   "icon": "one word from: moon coffee bolt vinyl headphones music flame cloud star sun heart",
-  "style_tags": ["2-4 genre/style keywords, lowercase, no # prefix, e.g. darkwave, trip-hop, minimal techno, post-punk"]
+  "style_tags": ["2-4 genre/style keywords, lowercase, no # prefix, e.g. darkwave, trip-hop, minimal techno, post-punk"],
+  "similar_artists": ["3-4 real artist names whose sound fits this archetype — not artists already in the top tracks"]
 }`;
 
     try {
@@ -185,8 +187,9 @@ Return JSON only — no prose, no markdown:
         return this.nameArchetypeFallback(input);
       }
 
-      // style_tags is optional — default to empty if AI omits it
+      // optional fields — default to empty if AI omits them
       if (!Array.isArray(parsed.style_tags)) parsed.style_tags = [];
+      if (!Array.isArray(parsed.similar_artists)) parsed.similar_artists = [];
 
       return parsed;
     } catch (err) {
@@ -339,6 +342,7 @@ Return JSON only — no prose, no markdown:
       color: cfg.color,
       icon: cfg.icon,
       style_tags: [],
+      similar_artists: [],
     };
   }
 }
