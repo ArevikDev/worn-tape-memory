@@ -7,7 +7,8 @@ import type { JwtPayload } from '@worn-tape-memory/shared';
 
 // Extract JWT from the httpOnly cookie named 'token'
 function extractJwtFromCookie(req: Request): string | null {
-  return req?.cookies?.token ?? null;
+  const cookies = req?.cookies as Record<string, string | undefined> | undefined;
+  return cookies?.token ?? null;
 }
 
 @Injectable()
@@ -21,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   // passport calls this after verifying the JWT signature
-  validate(payload: JwtPayload) {
+  validate(payload: JwtPayload): { userId: string; spotifyUserId: string } {
     return { userId: payload.sub, spotifyUserId: payload.spotifyUserId };
   }
 }

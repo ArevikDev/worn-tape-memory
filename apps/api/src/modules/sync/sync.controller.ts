@@ -1,10 +1,4 @@
-import {
-  Controller,
-  HttpCode,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SyncService } from './sync.service';
 
@@ -21,9 +15,7 @@ export class SyncController {
   @Post('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
-  syncMe(
-    @Req() req: AuthenticatedRequest,
-  ): Promise<{ inserted: number }> {
+  syncMe(@Req() req: AuthenticatedRequest): Promise<{ inserted: number }> {
     return this.sync.syncListensForUser(req.user.userId);
   }
 }

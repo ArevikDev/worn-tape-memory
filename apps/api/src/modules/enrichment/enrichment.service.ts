@@ -74,7 +74,6 @@ export class EnrichmentService {
     );
   }
 
-
   async backfillEnrichment(): Promise<{ queued: number }> {
     const unenriched = await this.db
       .select({ spotifyTrackId: tracks.spotifyTrackId })

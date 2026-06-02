@@ -8,11 +8,7 @@ import { EnrichTrackProcessor } from './enrichment.processor';
 import { ENRICH_TRACK_QUEUE } from './enrichment.constants';
 
 @Module({
-  imports: [
-    AuthModule,
-    AiModule,
-    BullModule.registerQueue({ name: ENRICH_TRACK_QUEUE }),
-  ],
+  imports: [AuthModule, AiModule, BullModule.registerQueue({ name: ENRICH_TRACK_QUEUE })],
   controllers: [EnrichmentController],
   providers: [EnrichmentService, EnrichTrackProcessor],
   exports: [EnrichmentService],

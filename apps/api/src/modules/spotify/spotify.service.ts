@@ -50,10 +50,7 @@ export class SpotifyService {
   }
 
   // Exchange authorization code for tokens (PKCE flow)
-  async exchangeCodeForTokens(
-    code: string,
-    codeVerifier: string,
-  ): Promise<SpotifyTokenResponse> {
+  async exchangeCodeForTokens(code: string, codeVerifier: string): Promise<SpotifyTokenResponse> {
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
@@ -78,9 +75,7 @@ export class SpotifyService {
   }
 
   // Refresh access token proactively — call when expires_at < now + 60s
-  async refreshAccessToken(
-    encryptedRefreshToken: string,
-  ): Promise<SpotifyTokenResponse> {
+  async refreshAccessToken(encryptedRefreshToken: string): Promise<SpotifyTokenResponse> {
     const refreshToken = this.crypto.decrypt(encryptedRefreshToken);
 
     const body = new URLSearchParams({
@@ -119,13 +114,10 @@ export class SpotifyService {
   }
 
   // Returns null if nothing is currently playing (Spotify returns 204)
-  async getCurrentlyPlaying(
-    accessToken: string,
-  ): Promise<SpotifyCurrentlyPlaying | null> {
-    const response = await fetch(
-      'https://api.spotify.com/v1/me/player/currently-playing',
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
+  async getCurrentlyPlaying(accessToken: string): Promise<SpotifyCurrentlyPlaying | null> {
+    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     if (response.status === 204) return null; // nothing playing
     if (!response.ok) return null; // treat errors as "nothing playing"
@@ -149,16 +141,11 @@ export class SpotifyService {
     if (response.status === 404) return false; // no active device
 
     const err = await response.text();
-    throw new Error(
-      `Spotify playTracks ${response.status}: ${err.slice(0, 200)}`,
-    );
+    throw new Error(`Spotify playTracks ${response.status}: ${err.slice(0, 200)}`);
   }
 
   // Refreshes proactively if the token expires within 60 seconds.
-  async getValidAccessToken(
-    db: DrizzleClient,
-    userId: string,
-  ): Promise<string> {
+  async getValidAccessToken(db: DrizzleClient, userId: string): Promise<string> {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) throw new UnauthorizedException('User not found');
 

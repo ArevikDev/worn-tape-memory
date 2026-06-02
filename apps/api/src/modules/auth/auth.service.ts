@@ -67,10 +67,7 @@ export class AuthService {
   }
 
   async getMe(userId: string): Promise<AuthUser> {
-    const [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId));
+    const [user] = await this.db.select().from(users).where(eq(users.id, userId));
 
     return {
       id: user.id,

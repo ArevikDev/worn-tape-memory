@@ -56,22 +56,15 @@ export class AiService {
       this.geminiModel = null;
     }
 
-    const providers = [
-      this.groqApiKey ? 'Groq' : null,
-      this.geminiModel ? 'Gemini' : null,
-    ]
+    const providers = [this.groqApiKey ? 'Groq' : null, this.geminiModel ? 'Gemini' : null]
       .filter(Boolean)
       .join(' → ');
-    this.logger.log(
-      `AI providers: ${providers || 'none (rule-based fallback only)'}`,
-    );
+    this.logger.log(`AI providers: ${providers || 'none (rule-based fallback only)'}`);
   }
 
   // ── Public API ───────────────────────────────────────────────────────────
 
-  async enrichTrack(
-    input: TrackEnrichmentInput,
-  ): Promise<TrackEnrichmentResult> {
+  async enrichTrack(input: TrackEnrichmentInput): Promise<TrackEnrichmentResult> {
     const yearStr = input.year ? ` (${input.year})` : '';
     const prompt = `You are a music taxonomist. Given this track, return ONLY a JSON object — no prose, no markdown.
 
@@ -93,9 +86,7 @@ Return:
     try {
       parsed = JSON.parse(cleaned) as TrackEnrichmentResult;
     } catch {
-      this.logger.error(
-        `Failed to parse AI response for "${input.name}": ${raw}`,
-      );
+      this.logger.error(`Failed to parse AI response for "${input.name}": ${raw}`);
       throw new Error('AI returned invalid JSON for enrichment');
     }
 
@@ -106,27 +97,15 @@ Return:
       !Array.isArray(parsed.vibe_vector) ||
       parsed.vibe_vector.length !== 8
     ) {
-      this.logger.error(
-        `AI response missing fields for "${input.name}": ${cleaned}`,
-      );
+      this.logger.error(`AI response missing fields for "${input.name}": ${cleaned}`);
       throw new Error('AI response missing required fields');
     }
 
     return parsed;
   }
 
-  async nameArchetype(
-    input: ArchetypeNamingInput,
-  ): Promise<ArchetypeNamingResult> {
-    const days = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ];
+  async nameArchetype(input: ArchetypeNamingInput): Promise<ArchetypeNamingResult> {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const hourLabel =
       input.peakHour < 12
         ? `${input.peakHour === 0 ? 12 : input.peakHour}am`
@@ -164,17 +143,13 @@ Return JSON only — no prose, no markdown:
 
     try {
       const raw = await this.generateText(prompt);
-      const cleaned = raw
-        .replace(/^```(?:json)?\n?/, '')
-        .replace(/\n?```$/, '');
+      const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
 
       let parsed: ArchetypeNamingResult;
       try {
         parsed = JSON.parse(cleaned) as ArchetypeNamingResult;
       } catch {
-        this.logger.warn(
-          `AI returned unparseable JSON for archetype, using fallback`,
-        );
+        this.logger.warn(`AI returned unparseable JSON for archetype, using fallback`);
         return this.nameArchetypeFallback(input);
       }
 
@@ -194,9 +169,7 @@ Return JSON only — no prose, no markdown:
       return parsed;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.warn(
-        `All AI providers failed for naming, using fallback: ${msg.slice(0, 120)}`,
-      );
+      this.logger.warn(`All AI providers failed for naming, using fallback: ${msg.slice(0, 120)}`);
       return this.nameArchetypeFallback(input);
     }
   }
@@ -218,28 +191,23 @@ Return JSON only — no prose, no markdown:
       return result.response.text().trim();
     }
 
-    throw new Error(
-      'No AI provider configured (set GROQ_API_KEY or GEMINI_API_KEY)',
-    );
+    throw new Error('No AI provider configured (set GROQ_API_KEY or GEMINI_API_KEY)');
   }
 
   private async callGroq(prompt: string): Promise<string> {
-    const response = await fetch(
-      'https://api.groq.com/openai/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.groqApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
-          max_tokens: 512,
-        }),
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.groqApiKey}`,
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 512,
+      }),
+    });
 
     if (!response.ok) {
       const text = await response.text();
@@ -254,18 +222,8 @@ Return JSON only — no prose, no markdown:
 
   // ── Rule-based fallback (no AI required) ────────────────────────────────
 
-  private nameArchetypeFallback(
-    input: ArchetypeNamingInput,
-  ): ArchetypeNamingResult {
-    const days = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ];
+  private nameArchetypeFallback(input: ArchetypeNamingInput): ArchetypeNamingResult {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const hourLabel =
       input.peakHour < 12
         ? `${input.peakHour === 0 ? 12 : input.peakHour}am`
@@ -275,59 +233,57 @@ Return JSON only — no prose, no markdown:
 
     const mood = input.dominantMoods[0] ?? 'eclectic';
 
-    const MOOD_CONFIGS: Record<
-      string,
-      { tag: string; color: string; icon: string; desc: string }
-    > = {
-      melancholy: {
-        tag: 'wound-licker',
-        color: '#6366f1',
-        icon: 'moon',
-        desc: 'Sad, slow music for processing the day.',
-      },
-      warm: {
-        tag: 'comfort seeker',
-        color: '#f59e0b',
-        icon: 'coffee',
-        desc: 'Familiar warmth. The playlist that feels like home.',
-      },
-      peak: {
-        tag: 'momentum builder',
-        color: '#ef4444',
-        icon: 'bolt',
-        desc: 'High-energy runs. You needed to move.',
-      },
-      hypnotic: {
-        tag: 'trance rider',
-        color: '#8b5cf6',
-        icon: 'wave-sine',
-        desc: 'Repetitive, deep, locked-in. You were somewhere else.',
-      },
-      euphoric: {
-        tag: 'joy chaser',
-        color: '#10b981',
-        icon: 'flame',
-        desc: 'Pure uplift. The music that made you feel it.',
-      },
-      contemplative: {
-        tag: 'slow thinker',
-        color: '#64748b',
-        icon: 'cloud',
-        desc: 'Patient and introspective. You were sitting with something.',
-      },
-      nostalgic: {
-        tag: 'time traveler',
-        color: '#c084fc',
-        icon: 'vinyl',
-        desc: 'Older sounds, music that pulls you back somewhere.',
-      },
-      dreamy: {
-        tag: 'cloud drifter',
-        color: '#38bdf8',
-        icon: 'star',
-        desc: 'Hazy, soft, unhurried. You were between here and elsewhere.',
-      },
-    };
+    const MOOD_CONFIGS: Record<string, { tag: string; color: string; icon: string; desc: string }> =
+      {
+        melancholy: {
+          tag: 'wound-licker',
+          color: '#6366f1',
+          icon: 'moon',
+          desc: 'Sad, slow music for processing the day.',
+        },
+        warm: {
+          tag: 'comfort seeker',
+          color: '#f59e0b',
+          icon: 'coffee',
+          desc: 'Familiar warmth. The playlist that feels like home.',
+        },
+        peak: {
+          tag: 'momentum builder',
+          color: '#ef4444',
+          icon: 'bolt',
+          desc: 'High-energy runs. You needed to move.',
+        },
+        hypnotic: {
+          tag: 'trance rider',
+          color: '#8b5cf6',
+          icon: 'wave-sine',
+          desc: 'Repetitive, deep, locked-in. You were somewhere else.',
+        },
+        euphoric: {
+          tag: 'joy chaser',
+          color: '#10b981',
+          icon: 'flame',
+          desc: 'Pure uplift. The music that made you feel it.',
+        },
+        contemplative: {
+          tag: 'slow thinker',
+          color: '#64748b',
+          icon: 'cloud',
+          desc: 'Patient and introspective. You were sitting with something.',
+        },
+        nostalgic: {
+          tag: 'time traveler',
+          color: '#c084fc',
+          icon: 'vinyl',
+          desc: 'Older sounds, music that pulls you back somewhere.',
+        },
+        dreamy: {
+          tag: 'cloud drifter',
+          color: '#38bdf8',
+          icon: 'star',
+          desc: 'Hazy, soft, unhurried. You were between here and elsewhere.',
+        },
+      };
 
     const cfg = MOOD_CONFIGS[mood] ?? {
       tag: 'listener',

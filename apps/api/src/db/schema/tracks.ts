@@ -1,11 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  text,
-  integer,
-  real,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, real, timestamp } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const tracks = pgTable('tracks', {
@@ -14,7 +7,7 @@ export const tracks = pgTable('tracks', {
     .default(sql`gen_random_uuid()`),
   spotifyTrackId: text('spotify_track_id').unique().notNull(),
   name: text('name').notNull(),
-  artistName: text('artist_name').notNull(),          // primary artist (display)
+  artistName: text('artist_name').notNull(), // primary artist (display)
   artistNames: text('artist_names').array().notNull(), // all artists
   albumName: text('album_name').notNull(),
   albumImageUrl: text('album_image_url'),

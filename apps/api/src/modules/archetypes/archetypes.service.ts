@@ -120,7 +120,7 @@ export class ArchetypesService {
     }
 
     if (detected === 0 && lastError !== undefined) {
-      const msg = lastError instanceof Error ? lastError.message : String(lastError);
+      const msg = lastError instanceof Error ? lastError.message : 'Unknown error during detection';
       throw new InternalServerErrorException(`Archetype detection failed: ${msg}`);
     }
 
@@ -162,18 +162,12 @@ export class ArchetypesService {
         moodCounts.set(r.moodCategory, (moodCounts.get(r.moodCategory) ?? 0) + 1);
       }
     });
-    const sortedMoods = [...moodCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([m]) => m);
+    const sortedMoods = [...moodCounts.entries()].sort((a, b) => b[1] - a[1]).map(([m]) => m);
     const primaryMood =
-      sortedMoods[0] ??
-      (MOOD_CATEGORIES[Math.floor(Math.random() * MOOD_CATEGORIES.length)] as string);
+      sortedMoods[0] ?? MOOD_CATEGORIES[Math.floor(Math.random() * MOOD_CATEGORIES.length)];
 
     // Top tracks (by frequency) — also capture album image URL per track
-    const trackFreq = new Map<
-      string,
-      { count: number; label: string; imageUrl: string | null }
-    >();
+    const trackFreq = new Map<string, { count: number; label: string; imageUrl: string | null }>();
     rows.forEach((r) => {
       const key = r.spotifyTrackId;
       const existing = trackFreq.get(key);
@@ -187,9 +181,7 @@ export class ArchetypesService {
         });
       }
     });
-    const topByFreq = [...trackFreq.entries()]
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 10);
+    const topByFreq = [...trackFreq.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, 10);
     const topTrackIds = topByFreq.map(([id]) => id);
     const topTrackLabels = topByFreq.map(([, v]) => v.label);
 
@@ -213,9 +205,7 @@ export class ArchetypesService {
       .map(([name]) => name);
 
     // Last appeared
-    const lastAppearedAt = new Date(
-      Math.max(...rows.map((r) => new Date(r.playedAt).getTime())),
-    );
+    const lastAppearedAt = new Date(Math.max(...rows.map((r) => new Date(r.playedAt).getTime())));
 
     // Call AI for name/description/color/icon/style_tags/similar_artists
     const naming = await this.ai.nameArchetype({

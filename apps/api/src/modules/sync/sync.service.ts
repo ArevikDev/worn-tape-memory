@@ -10,7 +10,6 @@ import { DRIZZLE_CLIENT } from '../auth/auth.service';
 import { SYNC_LISTENS_QUEUE, SyncListensJobData } from './sync.constants';
 import { EnrichmentService } from '../enrichment/enrichment.service';
 
-
 interface SpotifyArtist {
   id: string;
   name: string;

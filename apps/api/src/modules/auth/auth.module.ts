@@ -31,8 +31,7 @@ import { createDrizzleClient } from '../../db';
     {
       provide: DRIZZLE_CLIENT,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) =>
-        createDrizzleClient(config.getOrThrow('DATABASE_URL')),
+      useFactory: (config: ConfigService) => createDrizzleClient(config.getOrThrow('DATABASE_URL')),
     },
   ],
   exports: [DRIZZLE_CLIENT, JwtModule],

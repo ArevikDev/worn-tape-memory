@@ -7,7 +7,7 @@ import { SpotifyController } from '../spotify/spotify.controller';
 
 @Module({
   imports: [
-    AuthModule,    // DRIZZLE_CLIENT + JwtModule (for JwtAuthGuard)
+    AuthModule, // DRIZZLE_CLIENT + JwtModule (for JwtAuthGuard)
     SpotifyModule, // SpotifyService (for now-playing)
   ],
   controllers: [StatsController, SpotifyController],

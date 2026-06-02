@@ -27,10 +27,7 @@ export class ArchetypesController {
 
   // POST /archetypes/:id/play — start immediate Spotify playback for this archetype
   @Post(':id/play')
-  playArchetype(
-    @Request() req: { user: { userId: string } },
-    @Param('id') archetypeId: string,
-  ) {
+  playArchetype(@Request() req: { user: { userId: string } }, @Param('id') archetypeId: string) {
     return this.archetypes.playArchetype(req.user.userId, archetypeId);
   }
 }
