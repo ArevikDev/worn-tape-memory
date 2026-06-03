@@ -1,0 +1,185 @@
+<app-nav-shell>
+  <main class="relative overflow-hidden" style="height: calc(100vh - 65px)">
+
+    <!-- Header overlay -->
+    <div class="absolute top-0 left-0 right-0 z-10 flex items-start justify-between px-6 pt-6 pointer-events-none">
+      <div>
+        <h1 class="text-white text-xl font-semibold">Your mood map</h1>
+        <p class="text-zinc-500 text-sm mt-1">
+          Each dot is a track. Color is mood. Size is how often you've played it.
+        </p>
+      </div>
+      <div class="flex gap-1 pointer-events-auto">
+        @for (r of RANGES; track r) {
+          <button (click)="setRange(r)"
+            class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+            [class]="range() === r
+              ? 'bg-white text-zinc-950'
+              : 'text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700'">
+            {{ rangeLabel(r) }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Loading -->
+    @if (loading()) {
+      <div class="flex items-center justify-center h-full">
+        <div class="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-zinc-300 animate-spin"></div>
+      </div>
+
+    <!-- Empty -->
+    } @else if (points().length === 0) {
+      <div class="flex flex-col items-center justify-center h-full gap-4 text-center">
+        <div class="text-4xl">🗺️</div>
+        <div class="max-w-sm">
+          <p class="text-white font-medium">Nothing to map yet</p>
+          <p class="text-zinc-500 text-sm mt-2 leading-relaxed">
+            Not enough enriched tracks. Sync your Spotify history and wait for enrichment to finish.
+          </p>
+        </div>
+      </div>
+
+    <!-- Map -->
+    } @else {
+      <svg
+        [attr.viewBox]="'0 0 ' + W + ' ' + H"
+        class="w-full h-full cursor-default select-none"
+        preserveAspectRatio="xMidYMid meet"
+        (mousemove)="onMouseMove($event)"
+        (mouseleave)="onSvgLeave()">
+
+        <defs>
+          <!-- Glow filter for dots — tight so small dots stay crisp -->
+          <filter id="dot-glow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <!-- Stronger glow for hovered dot -->
+          <filter id="dot-glow-hover" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- Mood region labels (rendered behind dots) -->
+        @for (c of moodCentroids(); track c.mood) {
+          <text
+            [attr.x]="c.cx"
+            [attr.y]="c.cy"
+            text-anchor="middle"
+            dominant-baseline="middle"
+            font-size="13"
+            font-family="ui-monospace, 'SF Mono', monospace"
+            letter-spacing="2.5"
+            [attr.fill]="c.color"
+            [attr.opacity]="hovered()?.moodCategory === c.mood ? '0.9' : '0.48'"
+            pointer-events="none"
+            style="text-transform: uppercase">{{ c.mood }}</text>
+        }
+
+        <!-- Dots -->
+        @for (pt of points(); track pt.spotifyTrackId) {
+          <circle
+            [attr.cx]="cx(pt)"
+            [attr.cy]="cy(pt)"
+            [attr.r]="dotRadius(pt.playCount)"
+            [attr.fill]="moodColor(pt.moodCategory)"
+            [attr.opacity]="hovered() !== null && hovered() !== pt ? '0.25' : '1'"
+            [attr.stroke]="moodColor(pt.moodCategory)"
+            stroke-width="2"
+            stroke-opacity="0.5"
+            [attr.filter]="hovered() === pt ? 'url(#dot-glow-hover)' : 'url(#dot-glow)'"
+            [class.dot-hovered]="hovered() === pt"
+            class="cursor-pointer"
+            style="transition: opacity 0.12s"
+            (mouseenter)="onDotEnter(pt)"
+            (click)="openTrack(pt)"
+          />
+        }
+
+        <!-- Ripple rings on hovered dot — two staggered for continuous pulse -->
+        @if (hovered(); as h) {
+          <circle
+            class="dot-ripple"
+            [attr.cx]="cx(h)"
+            [attr.cy]="cy(h)"
+            [attr.r]="dotRadius(h.playCount)"
+            [attr.stroke]="moodColor(h.moodCategory)"
+            fill="none"
+            stroke-width="1.5"
+          />
+          <circle
+            class="dot-ripple-lag"
+            [attr.cx]="cx(h)"
+            [attr.cy]="cy(h)"
+            [attr.r]="dotRadius(h.playCount)"
+            [attr.stroke]="moodColor(h.moodCategory)"
+            fill="none"
+            stroke-width="1.5"
+          />
+        }
+      </svg>
+
+      <!-- Mood legend — bottom left -->
+      <div class="absolute bottom-5 left-6 z-10 flex flex-wrap gap-x-4 gap-y-1.5 max-w-sm">
+        @for (mood of presentMoods(); track mood) {
+          <div class="flex items-center gap-1.5">
+            <div class="w-2 h-2 rounded-full flex-shrink-0" [style.background-color]="moodColor(mood)"></div>
+            <span class="text-zinc-500 text-xs">{{ mood }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tooltip with album art -->
+    @if (hovered(); as h) {
+      <div
+        class="fixed z-50 pointer-events-none rounded-xl shadow-2xl overflow-hidden"
+        style="width: 220px; border: 1px solid rgba(255,255,255,0.08); background: #111"
+        [style.left.px]="tooltipX()"
+        [style.top.px]="tooltipY()">
+
+        <!-- Album art -->
+        @if (h.albumImageUrl) {
+          <div class="relative">
+            <img [src]="h.albumImageUrl" alt=""
+                 class="w-full object-cover"
+                 style="height: 110px" />
+            <!-- Gradient fade into card -->
+            <div class="absolute inset-0"
+                 style="background: linear-gradient(to bottom, transparent 40%, #111 100%)"></div>
+            <!-- Mood badge overlaid on image -->
+            @if (h.moodCategory) {
+              <span class="absolute bottom-2 left-3 text-xs px-2 py-0.5 rounded-full text-white font-semibold"
+                    [style.background-color]="moodColor(h.moodCategory) + 'cc'">
+                {{ h.moodCategory }}
+              </span>
+            }
+          </div>
+        } @else {
+          <!-- No art: just a colored band -->
+          <div class="h-1.5 w-full" [style.background-color]="moodColor(h.moodCategory)"></div>
+        }
+
+        <!-- Track info -->
+        <div class="px-3 py-2.5">
+          <p class="text-white text-sm font-semibold leading-snug line-clamp-2">{{ h.trackName }}</p>
+          <p class="text-zinc-400 text-xs mt-0.5 truncate">{{ h.artistName }}</p>
+          <div class="flex items-center justify-between mt-2">
+            <p class="text-zinc-600 text-xs">{{ h.playCount }} {{ h.playCount === 1 ? 'play' : 'plays' }}</p>
+            <p class="text-zinc-700 text-xs">↗ open in Spotify</p>
+          </div>
+        </div>
+
+      </div>
+    }
+
+  </main>
+</app-nav-shell>

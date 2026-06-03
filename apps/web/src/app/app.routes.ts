@@ -27,6 +27,12 @@ export const routes: Routes = [
       import('./features/archetypes/archetypes.component').then((m) => m.ArchetypesComponent),
   },
   {
+    path: 'mood-map',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/mood-map/mood-map.component').then((m) => m.MoodMapComponent),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

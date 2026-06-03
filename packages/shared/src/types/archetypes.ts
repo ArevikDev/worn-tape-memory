@@ -27,4 +27,11 @@ export type MoodCategory =
   | 'euphoric'
   | 'contemplative'
   | 'nostalgic'
-  | 'dreamy';
+  | 'dreamy'
+  | 'tense'
+  | 'serene'
+  | 'raw'
+  | 'bittersweet'
+  | 'electric'
+  | 'tender'
+  | 'brooding';
