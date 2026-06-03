@@ -8,6 +8,11 @@ export interface MoodMapPoint {
   albumImageUrl: string | null;
   spotifyUri: string;
   playCount: number;
+
+  archetypeId: string | null;
+  archetypeColor: string | null;
+  archetypeName: string | null;
+  primaryStyle: string | null;
 }
 
 export type MoodMapRange = 'all' | '3m' | '1m';

@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { eq, isNull } from 'drizzle-orm';
+import { eq, isNull, sql } from 'drizzle-orm';
 import type { DrizzleClient } from '../../db';
 import { tracks } from '../../db/schema';
 import { DRIZZLE_CLIENT } from '../auth/auth.service';
@@ -31,7 +31,13 @@ export class EnrichmentService {
       return;
     }
 
-    if (track.enrichedAt) {
+    // Skip only if fully enriched (has genre_tags too). Tracks enriched before
+    // genre_tags was added will have enrichedAt set but genreTags null — let them through.
+    if (
+      track.enrichedAt &&
+      Array.isArray(track.genreTags) &&
+      (track.genreTags as string[]).length > 0
+    ) {
       this.logger.debug(`Already enriched: "${track.name}", skipping`);
       return;
     }
@@ -50,6 +56,7 @@ export class EnrichmentService {
         moodCategory: enrichment.mood_category,
         energy: enrichment.energy,
         vibeVector: enrichment.vibe_vector,
+        genreTags: enrichment.genre_tags,
         enrichedAt: new Date(),
       })
       .where(eq(tracks.spotifyTrackId, spotifyTrackId));
@@ -86,5 +93,28 @@ export class EnrichmentService {
 
     this.logger.log(`Backfill: queued ${unenriched.length} tracks for enrichment`);
     return { queued: unenriched.length };
+  }
+
+  /** Re-enrich tracks that are missing genre_tags (enriched before this field was added). */
+  async backfillGenreTags(): Promise<{ queued: number }> {
+    const missingGenre = await this.db
+      .select({ spotifyTrackId: tracks.spotifyTrackId })
+      .from(tracks)
+      .where(sql`${tracks.genreTags} IS NULL`);
+
+    for (const track of missingGenre) {
+      await this.enqueueEnrichTrack(track.spotifyTrackId);
+    }
+
+    this.logger.log(`Genre backfill: queued ${missingGenre.length} tracks`);
+    return { queued: missingGenre.length };
+  }
+
+  /** Drain the failed job set so they can be re-queued cleanly. */
+  async clearFailedJobs(): Promise<{ cleared: number }> {
+    const count = await this.enrichQueue.getFailedCount();
+    await this.enrichQueue.clean(0, count, 'failed');
+    this.logger.log(`Cleared ${count} failed enrichment jobs`);
+    return { cleared: count };
   }
 }

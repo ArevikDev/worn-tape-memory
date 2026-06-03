@@ -6,16 +6,41 @@
       <div>
         <h1 class="text-white text-xl font-semibold">Your mood map</h1>
         <p class="text-zinc-500 text-sm mt-1">
-          Each dot is a track. Color is mood. Size is how often you've played it.
+          Each dot is a track. Color is
+          <span class="text-zinc-300">{{ colorMode() === 'mood' ? 'mood' : 'genre' }}</span>.
+          Size is how often you've played it.
         </p>
       </div>
-      <div class="flex gap-1 pointer-events-auto">
+
+      <!-- Controls -->
+      <div class="flex items-center gap-1 pointer-events-auto">
+
+        <!-- Color mode toggle -->
+        <button (click)="setColorMode('mood')"
+          class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+          [class]="colorMode() === 'mood'
+            ? 'bg-white text-zinc-950'
+            : 'text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700'">
+          Mood
+        </button>
+        <button (click)="setColorMode('genre')"
+          class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+          [class]="colorMode() === 'genre'
+            ? 'bg-white text-zinc-950'
+            : 'text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700'">
+          Genre
+        </button>
+
+        <!-- Divider -->
+        <div class="w-px h-4 bg-zinc-700 mx-1"></div>
+
+        <!-- Time range -->
         @for (r of RANGES; track r) {
           <button (click)="setRange(r)"
             class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
             [class]="range() === r
-              ? 'bg-white text-zinc-950'
-              : 'text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700'">
+              ? 'bg-zinc-700 text-white'
+              : 'text-zinc-500 hover:text-zinc-300'">
             {{ rangeLabel(r) }}
           </button>
         }
@@ -50,7 +75,6 @@
         (mouseleave)="onSvgLeave()">
 
         <defs>
-          <!-- Glow filter for dots — tight so small dots stay crisp -->
           <filter id="dot-glow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="2.5" result="blur"/>
             <feMerge>
@@ -58,7 +82,6 @@
               <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
-          <!-- Stronger glow for hovered dot -->
           <filter id="dot-glow-hover" x="-100%" y="-100%" width="300%" height="300%">
             <feGaussianBlur stdDeviation="5" result="blur"/>
             <feMerge>
@@ -68,8 +91,8 @@
           </filter>
         </defs>
 
-        <!-- Mood region labels (rendered behind dots) -->
-        @for (c of moodCentroids(); track c.mood) {
+        <!-- Region labels -->
+        @for (c of activeCentroids(); track c.key) {
           <text
             [attr.x]="c.cx"
             [attr.y]="c.cy"
@@ -79,9 +102,9 @@
             font-family="ui-monospace, 'SF Mono', monospace"
             letter-spacing="2.5"
             [attr.fill]="c.color"
-            [attr.opacity]="hovered()?.moodCategory === c.mood ? '0.9' : '0.48'"
+            [attr.opacity]="hovered()?.moodCategory === c.key || hovered()?.primaryStyle === c.key ? '0.9' : '0.48'"
             pointer-events="none"
-            style="text-transform: uppercase">{{ c.mood }}</text>
+            style="text-transform: uppercase">{{ c.label }}</text>
         }
 
         <!-- Dots -->
@@ -90,9 +113,9 @@
             [attr.cx]="cx(pt)"
             [attr.cy]="cy(pt)"
             [attr.r]="dotRadius(pt.playCount)"
-            [attr.fill]="moodColor(pt.moodCategory)"
+            [attr.fill]="dotColor(pt)"
             [attr.opacity]="hovered() !== null && hovered() !== pt ? '0.25' : '1'"
-            [attr.stroke]="moodColor(pt.moodCategory)"
+            [attr.stroke]="dotColor(pt)"
             stroke-width="2"
             stroke-opacity="0.5"
             [attr.filter]="hovered() === pt ? 'url(#dot-glow-hover)' : 'url(#dot-glow)'"
@@ -104,14 +127,14 @@
           />
         }
 
-        <!-- Ripple rings on hovered dot — two staggered for continuous pulse -->
+        <!-- Ripple rings on hovered dot -->
         @if (hovered(); as h) {
           <circle
             class="dot-ripple"
             [attr.cx]="cx(h)"
             [attr.cy]="cy(h)"
             [attr.r]="dotRadius(h.playCount)"
-            [attr.stroke]="moodColor(h.moodCategory)"
+            [attr.stroke]="dotColor(h)"
             fill="none"
             stroke-width="1.5"
           />
@@ -120,25 +143,25 @@
             [attr.cx]="cx(h)"
             [attr.cy]="cy(h)"
             [attr.r]="dotRadius(h.playCount)"
-            [attr.stroke]="moodColor(h.moodCategory)"
+            [attr.stroke]="dotColor(h)"
             fill="none"
             stroke-width="1.5"
           />
         }
       </svg>
 
-      <!-- Mood legend — bottom left -->
-      <div class="absolute bottom-5 left-6 z-10 flex flex-wrap gap-x-4 gap-y-1.5 max-w-sm">
-        @for (mood of presentMoods(); track mood) {
+      <!-- Legend -->
+      <div class="absolute bottom-5 left-6 z-10 flex flex-wrap gap-x-4 gap-y-1.5 max-w-md">
+        @for (item of legendItems(); track item.label) {
           <div class="flex items-center gap-1.5">
-            <div class="w-2 h-2 rounded-full flex-shrink-0" [style.background-color]="moodColor(mood)"></div>
-            <span class="text-zinc-500 text-xs">{{ mood }}</span>
+            <div class="w-2 h-2 rounded-full flex-shrink-0" [style.background-color]="item.color"></div>
+            <span class="text-zinc-500 text-xs">{{ item.label }}</span>
           </div>
         }
       </div>
     }
 
-    <!-- Tooltip with album art -->
+    <!-- Tooltip -->
     @if (hovered(); as h) {
       <div
         class="fixed z-50 pointer-events-none rounded-xl shadow-2xl overflow-hidden"
@@ -146,16 +169,13 @@
         [style.left.px]="tooltipX()"
         [style.top.px]="tooltipY()">
 
-        <!-- Album art -->
         @if (h.albumImageUrl) {
           <div class="relative">
             <img [src]="h.albumImageUrl" alt=""
                  class="w-full object-cover"
                  style="height: 110px" />
-            <!-- Gradient fade into card -->
             <div class="absolute inset-0"
                  style="background: linear-gradient(to bottom, transparent 40%, #111 100%)"></div>
-            <!-- Mood badge overlaid on image -->
             @if (h.moodCategory) {
               <span class="absolute bottom-2 left-3 text-xs px-2 py-0.5 rounded-full text-white font-semibold"
                     [style.background-color]="moodColor(h.moodCategory) + 'cc'">
@@ -164,17 +184,23 @@
             }
           </div>
         } @else {
-          <!-- No art: just a colored band -->
-          <div class="h-1.5 w-full" [style.background-color]="moodColor(h.moodCategory)"></div>
+          <div class="h-1.5 w-full" [style.background-color]="dotColor(h)"></div>
         }
 
-        <!-- Track info -->
         <div class="px-3 py-2.5">
           <p class="text-white text-sm font-semibold leading-snug line-clamp-2">{{ h.trackName }}</p>
           <p class="text-zinc-400 text-xs mt-0.5 truncate">{{ h.artistName }}</p>
+
+          @if (h.primaryStyle) {
+            <p class="text-xs mt-1.5 truncate font-medium"
+               [style.color]="genreColor(h.primaryStyle)">
+              {{ h.primaryStyle }}
+            </p>
+          }
+
           <div class="flex items-center justify-between mt-2">
             <p class="text-zinc-600 text-xs">{{ h.playCount }} {{ h.playCount === 1 ? 'play' : 'plays' }}</p>
-            <p class="text-zinc-700 text-xs">↗ open in Spotify</p>
+            <p class="text-zinc-700 text-xs">↗ open</p>
           </div>
         </div>
 

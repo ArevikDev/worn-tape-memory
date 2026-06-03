@@ -16,11 +16,11 @@ export const tracks = pgTable('tracks', {
   spotifyUri: text('spotify_uri').notNull(),
   releaseYear: integer('release_year'),
 
-  // AI enrichment — populated by Day 8 EnrichTrackJob
   moodTags: text('mood_tags').array(),
   moodCategory: text('mood_category'),
   energy: real('energy'),
   vibeVector: real('vibe_vector').array(),
+  genreTags: text('genre_tags').array(),
   enrichedAt: timestamp('enriched_at'),
 
   createdAt: timestamp('created_at').default(sql`now()`),

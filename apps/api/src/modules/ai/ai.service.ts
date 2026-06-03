@@ -31,13 +31,13 @@ export interface TrackEnrichmentResult {
   mood_category: string;
   energy: number;
   vibe_vector: number[];
+  genre_tags: string[];
 }
 
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
 
-  // Both keys are optional — the service tries Groq first, Gemini second
   private readonly groqApiKey: string | null;
   private readonly geminiModel: ReturnType<
     InstanceType<typeof GoogleGenerativeAI>['getGenerativeModel']
@@ -76,7 +76,8 @@ Return:
   "mood_tags": [3-5 evocative one-word tags like "melancholy", "patient", "euphoric"],
   "mood_category": one of ["melancholy", "warm", "peak", "hypnotic", "euphoric", "contemplative", "nostalgic", "dreamy", "tense", "serene", "raw", "bittersweet", "electric", "tender", "brooding"],
   "energy": number 0-10 (10 = peak-time techno, 1 = ambient drone),
-  "vibe_vector": array of exactly 8 numbers from -1 to 1 representing the track's position in vibe space
+  "vibe_vector": array of exactly 8 numbers from -1 to 1 representing the track's position in vibe space,
+  "genre_tags": [2-4 genre/style keywords, lowercase, specific — e.g. "darkwave", "trip-hop", "minimal techno", "post-punk", "shoegaze", "lo-fi hip-hop", "jazz fusion"]
 }`;
 
     const raw = await this.generateText(prompt);
@@ -100,6 +101,9 @@ Return:
       this.logger.error(`AI response missing fields for "${input.name}": ${cleaned}`);
       throw new Error('AI response missing required fields');
     }
+
+    // genre_tags is optional — default to empty if AI omits it
+    if (!Array.isArray(parsed.genre_tags)) parsed.genre_tags = [];
 
     return parsed;
   }

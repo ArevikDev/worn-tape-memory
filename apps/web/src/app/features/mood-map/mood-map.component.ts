@@ -24,12 +24,24 @@ const MOOD_COLORS: Record<string, string> = {
   brooding: '#475569',
 };
 
-interface MoodCentroid {
-  mood: string;
+type ColorMode = 'mood' | 'genre';
+
+/** Deterministic color for any genre string — same genre always → same color. */
+function genreColor(genre: string): string {
+  let hash = 0;
+  for (let i = 0; i < genre.length; i++) {
+    hash = genre.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 62%, 58%)`;
+}
+
+interface MapCentroid {
+  key: string;
+  label: string;
   cx: number;
   cy: number;
   color: string;
-  count: number;
 }
 
 @Component({
@@ -84,6 +96,8 @@ export class MoodMapComponent implements OnInit, OnDestroy {
   protected readonly points = signal<MoodMapPoint[]>([]);
   protected readonly loading = signal(true);
   protected readonly range = signal<MoodMapRange>('all');
+  protected readonly colorMode = signal<ColorMode>('mood');
+  protected readonly genreColor = genreColor;
   protected readonly hovered = signal<MoodMapPoint | null>(null);
   protected readonly tooltipX = signal(0);
   protected readonly tooltipY = signal(0);
@@ -94,19 +108,14 @@ export class MoodMapComponent implements OnInit, OnDestroy {
   protected readonly PAD = 56;
 
   protected readonly RANGES: MoodMapRange[] = ['all', '3m', '1m'];
-  private hideTimer: ReturnType<typeof setTimeout> | null = null;
   protected readonly MOOD_COLORS = MOOD_COLORS;
 
-  protected readonly presentMoods = computed(() => {
-    const seen = new Set<string>();
-    for (const p of this.points()) {
-      if (p.moodCategory) seen.add(p.moodCategory);
-    }
-    return [...seen];
-  });
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Centroid of each mood cluster — used to label regions on the map
-  protected readonly moodCentroids = computed((): MoodCentroid[] => {
+  // ── Derived state ────────────────────────────────────────────────────────
+
+  /** Mood centroids — used in mood mode */
+  protected readonly moodCentroids = computed((): MapCentroid[] => {
     const groups = new Map<string, { sumX: number; sumY: number; count: number }>();
     for (const pt of this.points()) {
       if (!pt.moodCategory) continue;
@@ -119,22 +128,79 @@ export class MoodMapComponent implements OnInit, OnDestroy {
     return [...groups.entries()]
       .filter(([, g]) => g.count >= 3)
       .map(([mood, g]) => ({
-        mood,
+        key: mood,
+        label: mood,
         cx: g.sumX / g.count,
         cy: g.sumY / g.count,
         color: MOOD_COLORS[mood] ?? '#52525b',
-        count: g.count,
       }));
   });
+
+  /** Genre centroids — used in genre mode */
+  protected readonly styleCentroids = computed((): MapCentroid[] => {
+    const groups = new Map<string, { sumX: number; sumY: number; count: number }>();
+    for (const pt of this.points()) {
+      if (!pt.primaryStyle) continue;
+      const g = groups.get(pt.primaryStyle) ?? { sumX: 0, sumY: 0, count: 0 };
+      g.sumX += this.cx(pt);
+      g.sumY += this.cy(pt);
+      g.count++;
+      groups.set(pt.primaryStyle, g);
+    }
+    return [...groups.entries()]
+      .filter(([, g]) => g.count >= 2)
+      .map(([genre, g]) => ({
+        key: genre,
+        label: genre,
+        cx: g.sumX / g.count,
+        cy: g.sumY / g.count,
+        color: genreColor(genre),
+      }));
+  });
+
+  protected readonly activeCentroids = computed(() =>
+    this.colorMode() === 'mood' ? this.moodCentroids() : this.styleCentroids(),
+  );
+
+  /** Legend items for current color mode */
+  protected readonly legendItems = computed(() => {
+    if (this.colorMode() === 'mood') {
+      const seen = new Set<string>();
+      for (const p of this.points()) {
+        if (p.moodCategory) seen.add(p.moodCategory);
+      }
+      return [...seen].map((m) => ({ label: m, color: MOOD_COLORS[m] ?? '#52525b' }));
+    }
+    // Genre mode — one entry per genre
+    const seen = new Set<string>();
+    for (const p of this.points()) {
+      if (p.primaryStyle) seen.add(p.primaryStyle);
+    }
+    return [...seen].map((g) => ({ label: g, color: genreColor(g) }));
+  });
+
+  // ── Lifecycle ────────────────────────────────────────────────────────────
 
   async ngOnInit(): Promise<void> {
     await this.loadMap();
   }
 
+  ngOnDestroy(): void {
+    this.cancelHide();
+  }
+
+  // ── Actions ──────────────────────────────────────────────────────────────
+
   async setRange(r: MoodMapRange): Promise<void> {
     if (r === this.range()) return;
     this.range.set(r);
     await this.loadMap();
+  }
+
+  setColorMode(m: ColorMode): void {
+    this.colorMode.set(m);
+    this.cancelHide();
+    this.hovered.set(null);
   }
 
   private async loadMap(): Promise<void> {
@@ -154,6 +220,8 @@ export class MoodMapComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
   cx(pt: MoodMapPoint): number {
     return pt.x * (this.W - 2 * this.PAD) + this.PAD;
   }
@@ -166,6 +234,13 @@ export class MoodMapComponent implements OnInit, OnDestroy {
     return Math.min(18, Math.max(7, Math.sqrt(playCount) * 2.8));
   }
 
+  dotColor(pt: MoodMapPoint): string {
+    if (this.colorMode() === 'genre') {
+      return pt.primaryStyle ? genreColor(pt.primaryStyle) : '#3f3f46';
+    }
+    return MOOD_COLORS[pt.moodCategory ?? ''] ?? '#52525b';
+  }
+
   moodColor(moodCategory: string | null): string {
     return MOOD_COLORS[moodCategory ?? ''] ?? '#52525b';
   }
@@ -175,6 +250,8 @@ export class MoodMapComponent implements OnInit, OnDestroy {
     if (r === '3m') return '3 months';
     return '1 month';
   }
+
+  // ── Mouse ────────────────────────────────────────────────────────────────
 
   onMouseMove(e: MouseEvent): void {
     const tooltipW = 240;
@@ -190,24 +267,16 @@ export class MoodMapComponent implements OnInit, OnDestroy {
 
     this.tooltipX.set(x);
     this.tooltipY.set(y);
-
-    // Moving over empty space — schedule a delayed clear
     this.scheduleHide(700);
   }
 
   onSvgLeave(): void {
-    // Leaving the SVG entirely — clear a bit faster
     this.scheduleHide(300);
   }
 
   onDotEnter(pt: MoodMapPoint): void {
-    // Entering a dot — cancel any pending hide and show immediately
     this.cancelHide();
     this.hovered.set(pt);
-  }
-
-  ngOnDestroy(): void {
-    this.cancelHide();
   }
 
   private scheduleHide(ms: number): void {
