@@ -45,8 +45,11 @@ export class ArchetypesComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly detecting = signal(false);
   protected readonly detectError = signal<string | null>(null);
-  protected readonly exportingId = signal<string | null>(null);
-  protected readonly playingId = signal<string | null>(null);
+
+  // Single action per card: export playlist → open in Spotify app
+  protected readonly openingId = signal<string | null>(null);
+
+  // Artist playback (clicking artist name chips)
   protected readonly loadingArtist = signal<string | null>(null);
   protected readonly playingArtist = signal<string | null>(null);
 
@@ -124,32 +127,29 @@ export class ArchetypesComponent implements OnInit {
     }
   }
 
-  async play(archetype: Archetype): Promise<void> {
-    this.exportingId.set(archetype.id);
+  /** Export archetype as a Spotify playlist and open it on open.spotify.com. */
+  async openInSpotify(archetype: Archetype): Promise<void> {
+    this.openingId.set(archetype.id);
     this.detectError.set(null);
     try {
       const result = await firstValueFrom(
-        this.http.post<{ playing: boolean; noDevice: boolean }>(
-          `${API_BASE}/archetypes/${archetype.id}/play`,
+        this.http.post<{ playlistId: string; playlistUrl: string; trackCount: number }>(
+          `${API_BASE}/playlists/export/${archetype.id}`,
           {},
           { withCredentials: true },
         ),
       );
-      if (result.noDevice) {
-        this.detectError.set('Open Spotify on any device first, then try again.');
-      } else {
-        // Show "Playing" badge for 4 seconds then reset
-        this.playingId.set(archetype.id);
-        setTimeout(() => this.playingId.set(null), 4000);
-      }
+      // Open the playlist on open.spotify.com — already in the user's library
+      // since it's owned by them; from here they can save/share it themselves.
+      window.open(result.playlistUrl, '_blank');
     } catch (err: unknown) {
       const msg =
         err instanceof HttpErrorResponse
           ? (err.error?.message ?? err.message)
-          : 'Could not start playback. Try again.';
+          : 'Could not open in Spotify. Try again.';
       this.detectError.set(msg);
     } finally {
-      this.exportingId.set(null);
+      this.openingId.set(null);
     }
   }
 
@@ -158,17 +158,17 @@ export class ArchetypesComponent implements OnInit {
     this.detectError.set(null);
     try {
       const result = await firstValueFrom(
-        this.http.post<{ playing: boolean; noDevice: boolean; spotifyUri: string; artistUrl: string }>(
-          `${API_BASE}/archetypes/play-artist`,
-          { artistName: name },
-          { withCredentials: true },
-        ),
+        this.http.post<{
+          playing: boolean;
+          noDevice: boolean;
+          spotifyUri: string;
+          artistUrl: string;
+        }>(`${API_BASE}/archetypes/play-artist`, { artistName: name }, { withCredentials: true }),
       );
       if (result.noDevice) {
-   
         const target = result.spotifyUri || result.artistUrl;
         if (target) window.open(target, '_blank');
-        this.detectError.set('Open Spotify on any device first, then try again.');
+        this.detectError.set('No active device — opened Spotify. Come back and try again.');
       } else if (!result.playing && result.spotifyUri) {
         window.open(result.spotifyUri, '_blank');
       } else {

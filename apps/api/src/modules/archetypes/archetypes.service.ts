@@ -192,7 +192,7 @@ export class ArchetypesService {
         });
       }
     });
-    const topByFreq = [...trackFreq.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, 10);
+    const topByFreq = [...trackFreq.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, 20);
     const topTrackIds = topByFreq.map(([id]) => id);
     const topTrackLabels = topByFreq.map(([, v]) => v.label);
 
@@ -273,7 +273,7 @@ export class ArchetypesService {
   async playArchetype(
     userId: string,
     archetypeId: string,
-  ): Promise<{ playing: boolean; noDevice: boolean }> {
+  ): Promise<{ playing: boolean; noDevice: boolean; fallbackUri: string }> {
     const [archetype] = await this.db
       .select()
       .from(archetypes)
@@ -288,9 +288,12 @@ export class ArchetypesService {
       throw new InternalServerErrorException('No tracks in this archetype');
     }
 
+    // Fallback deep-link: opens first track in Spotify so the user can activate a device
+    const fallbackUri = `spotify:track:${archetype.trackIds[0]}`;
+
     try {
       const playing = await this.spotify.playTracks(accessToken, trackUris);
-      return { playing, noDevice: !playing };
+      return { playing, noDevice: !playing, fallbackUri };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`playArchetype failed for ${userId}/${archetypeId}: ${msg}`);

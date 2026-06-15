@@ -43,7 +43,6 @@ export interface SpotifyCurrentlyPlaying {
 export class SpotifyService {
   private readonly logger = new Logger(SpotifyService.name);
   private readonly clientId: string;
-  private readonly clientSecret: string;
   private readonly redirectUri: string;
 
   constructor(
@@ -51,7 +50,6 @@ export class SpotifyService {
     private readonly crypto: CryptoService,
   ) {
     this.clientId = this.config.getOrThrow('SPOTIFY_CLIENT_ID');
-    this.clientSecret = this.config.getOrThrow('SPOTIFY_CLIENT_SECRET');
     this.redirectUri = this.config.getOrThrow('SPOTIFY_REDIRECT_URI');
   }
 
@@ -84,11 +82,11 @@ export class SpotifyService {
   async refreshAccessToken(encryptedRefreshToken: string): Promise<SpotifyTokenResponse> {
     const refreshToken = this.crypto.decrypt(encryptedRefreshToken);
 
+    // PKCE refresh must not include client_secret — only client_id
     const body = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: this.clientId,
-      client_secret: this.clientSecret,
     });
 
     const response = await fetch('https://accounts.spotify.com/api/token', {
@@ -168,6 +166,66 @@ export class SpotifyService {
     const playing = await this.playTracks(accessToken, trackUris);
     return { playing, noDevice: !playing, spotifyUri, artistUrl };
   }
+
+  // ── Playlist management ──────────────────────────────────────────────────
+
+  /** Create a private playlist and return its Spotify ID + URL. */
+  async createPlaylist(
+    accessToken: string,
+    name: string,
+    description: string,
+  ): Promise<{ id: string; url: string }> {
+    // Use /me/playlists — avoids 403s from user-id mismatches on the /users/{id} endpoint
+    const response = await fetch(`https://api.spotify.com/v1/me/playlists`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      // Create playlists as private by default to reduce required scopes.
+      body: JSON.stringify({ name, description, public: false }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Spotify createPlaylist ${response.status}: ${err.slice(0, 200)}`);
+    }
+
+    const data = (await response.json()) as { id: string; external_urls?: { spotify: string } };
+    return { id: data.id, url: data.external_urls?.spotify ?? '' };
+  }
+
+  /**
+   * Replace a playlist's tracks with the given URIs.
+   * Handles batching: PUT for the first 100 (replaces), POST for each subsequent batch (300ms gap, appends).
+   */
+  async setPlaylistTracks(accessToken: string, playlistId: string, uris: string[]): Promise<void> {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    const batches: string[][] = [];
+    for (let i = 0; i < uris.length; i += 100) batches.push(uris.slice(i, i + 100));
+    if (batches.length === 0) batches.push([]);
+
+    for (let i = 0; i < batches.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 300));
+      const method = i === 0 ? 'PUT' : 'POST';
+      // /tracks was retired in Spotify's Feb 2026 API migration — use /items
+      const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
+        method,
+        headers,
+        body: JSON.stringify({ uris: batches[i] }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Spotify setPlaylistTracks ${method} ${res.status}: ${err.slice(0, 200)}`);
+      }
+    }
+  }
+
+  // ── Playback ─────────────────────────────────────────────────────────────
 
   // Start immediate playback of track URIs on the user's active Spotify device.
   // Returns false when no active device exists (user needs to open Spotify first).

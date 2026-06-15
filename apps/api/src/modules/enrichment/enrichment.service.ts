@@ -33,11 +33,7 @@ export class EnrichmentService {
 
     // Skip only if fully enriched (has genre_tags too). Tracks enriched before
     // genre_tags was added will have enrichedAt set but genreTags null — let them through.
-    if (
-      track.enrichedAt &&
-      Array.isArray(track.genreTags) &&
-      (track.genreTags as string[]).length > 0
-    ) {
+    if (track.enrichedAt && Array.isArray(track.genreTags) && track.genreTags.length > 0) {
       this.logger.debug(`Already enriched: "${track.name}", skipping`);
       return;
     }

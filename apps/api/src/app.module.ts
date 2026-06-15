@@ -9,6 +9,7 @@ import { StatsModule } from './modules/stats/stats.module';
 import { EnrichmentModule } from './modules/enrichment/enrichment.module';
 import { ArchetypesModule } from './modules/archetypes/archetypes.module';
 import { MoodMapModule } from './modules/mood-map/mood-map.module';
+import { PlaylistsModule } from './modules/playlists/playlists.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { MoodMapModule } from './modules/mood-map/mood-map.module';
     EnrichmentModule,
     ArchetypesModule,
     MoodMapModule,
+    PlaylistsModule,
   ],
 })
 export class AppModule {}
