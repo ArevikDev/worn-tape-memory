@@ -57,6 +57,7 @@ export class StatsService {
         this.db
           .select({
             artistName: tracks.artistName,
+            albumImageUrl: sql<string | null>`max(${tracks.albumImageUrl})`,
             playCount: sql<number>`cast(count(*) as int)`,
           })
           .from(listens)

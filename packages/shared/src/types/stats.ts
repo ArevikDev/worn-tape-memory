@@ -8,6 +8,7 @@ export interface TrackStat {
 
 export interface ArtistStat {
   artistName: string;
+  albumImageUrl: string | null;
   playCount: number;
 }
 

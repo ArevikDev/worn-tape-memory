@@ -109,6 +109,11 @@
                   <span class="text-zinc-700 text-xs w-4 text-right flex-shrink-0 tabular-nums">
                     {{ i + 1 }}
                   </span>
+                  @if (artist.albumImageUrl) {
+                    <img [src]="artist.albumImageUrl" alt="" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                  } @else {
+                    <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0"></div>
+                  }
                   <p class="text-white text-sm flex-1 truncate">{{ artist.artistName }}</p>
                   <span class="text-zinc-600 text-xs flex-shrink-0 tabular-nums">
                     {{ artist.playCount }}×
