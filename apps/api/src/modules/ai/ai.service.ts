@@ -137,7 +137,7 @@ RULES for the description — one sentence, second person:
 
 Return JSON only — no prose, no markdown:
 {
-  "name": "The [2-5 words — a feeling, time, or habit, NOT a genre label or job title. Good: '4am Slow Rewind', 'Tuesday Voltage Drop', 'Late Sunday Unravel', 'Midnight Tape Loop'. BANNED: 'Saturday Downtempo Fan', 'Monday Noon Dreamer', 'Sunday Night Contemplator', anything ending in Fan/Listener/Lover/Dreamer]",
+  "name": "The [2-4 words. NO day-of-week, NO time-of-day. Combine a genre/style word (shoegaze, IDM, darkwave, dub, breakbeat, drone, motorik, vaporwave, etc — pick from the actual tracks/moods) with either a vivid adjective or a nerdy music-production/DJ term (sidechain, arpeggiator, low-pass, tape hiss, reverb tail, sub-bass, quantize, crossfade). Vary the structure each time — don't force the same word order or pattern across archetypes. Good: 'Murky Shoegaze ', 'Glacial IDM ', 'Acidic Breakbeat ', 'Velvet Dub ', 'Motorik Tape '. BANNED generic vibe words: haze, glow, drift, groove, surge, wave, vibe, flow, pulse, bloom, echo, rewind, unravel — and anything ending in Fan/Listener/Lover/Dreamer]",
   "description": "[one grounded sentence as above]",
   "color": "#hex",
   "icon": "one word from: moon coffee bolt vinyl headphones music flame cloud star sun heart",
