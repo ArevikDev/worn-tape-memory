@@ -19,15 +19,20 @@
     </button>
   </div>
 
-  <!-- Main content -->
-  <main class="max-w-5xl mx-auto px-6 py-8 space-y-6">
+  <app-ambient-background />
 
-    <!-- Now Playing -->
+  <main class="max-w-5xl mx-auto px-6 py-8 space-y-6 relative">
+
     @if (nowPlaying()) {
-      <div class="flex items-center gap-4 bg-zinc-900 rounded-xl px-5 py-4 border border-zinc-800">
+      <div class="flex items-center gap-4 bg-zinc-900 rounded-xl px-5 py-4 border border-zinc-800
+                  animate-fade-in-up">
         @if (nowPlaying()!.albumImageUrl) {
-          <img [src]="nowPlaying()!.albumImageUrl" alt="Album art"
-            class="w-12 h-12 rounded-md flex-shrink-0" />
+          <div class="relative flex-shrink-0">
+            <div class="absolute inset-0 rounded-md bg-gradient-to-br from-indigo-500 to-amber-500
+                        blur-md opacity-50 animate-glow-pulse"></div>
+            <img [src]="nowPlaying()!.albumImageUrl" alt="Album art"
+              class="relative w-12 h-12 rounded-md flex-shrink-0 ring-1 ring-white/10" />
+          </div>
         }
         <div class="min-w-0 flex-1">
           <p class="text-white font-medium truncate">{{ nowPlaying()!.trackName }}</p>
@@ -43,26 +48,55 @@
     @if (stats(); as s) {
       <!-- Stats strip -->
       <div class="grid grid-cols-3 gap-3 sm:gap-4">
-        <div class="bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800">
-          <p class="text-2xl sm:text-3xl font-bold text-white tabular-nums">{{ s.totalListens }}</p>
+        <div class="group bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800
+                    transition-all duration-300 hover:-translate-y-1 hover:border-indigo-500/40
+                    hover:shadow-lg hover:shadow-indigo-500/10
+                    animate-fade-in-up [animation-delay:0ms]">
+          <div class="flex items-center justify-between">
+            <p class="text-2xl sm:text-3xl font-bold text-white tabular-nums">{{ s.totalListens }}</p>
+            <svg class="w-5 h-5 text-zinc-700 group-hover:text-indigo-400 transition-colors"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 14a9 9 0 0118 0v4a2 2 0 01-2 2h-1a1 1 0 01-1-1v-4a1 1 0 011-1h3M3 14v3a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 00-1-1H3" />
+            </svg>
+          </div>
           <p class="text-zinc-500 text-xs sm:text-sm mt-1">listens</p>
         </div>
-        <div class="bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800">
-          <p class="text-2xl sm:text-3xl font-bold text-white tabular-nums">{{ s.uniqueTracks }}</p>
+        <div class="group bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800
+                    transition-all duration-300 hover:-translate-y-1 hover:border-amber-500/40
+                    hover:shadow-lg hover:shadow-amber-500/10
+                    animate-fade-in-up [animation-delay:80ms]">
+          <div class="flex items-center justify-between">
+            <p class="text-2xl sm:text-3xl font-bold text-white tabular-nums">{{ s.uniqueTracks }}</p>
+            <svg class="w-5 h-5 text-zinc-700 group-hover:text-amber-400 transition-colors"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 18V5l12-2v13M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-2a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
           <p class="text-zinc-500 text-xs sm:text-sm mt-1">tracks</p>
         </div>
-        <div class="bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800">
-          <p class="text-2xl sm:text-3xl font-bold text-white tabular-nums">{{ s.uniqueArtists }}</p>
+        <div class="group bg-zinc-900 rounded-xl p-4 sm:p-5 border border-zinc-800
+                    transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40
+                    hover:shadow-lg hover:shadow-emerald-500/10
+                    animate-fade-in-up [animation-delay:160ms]">
+          <div class="flex items-center justify-between">
+            <p class="text-2xl sm:text-3xl font-bold text-white tabular-nums">{{ s.uniqueArtists }}</p>
+            <svg class="w-5 h-5 text-zinc-700 group-hover:text-emerald-400 transition-colors"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m9-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 3a4 4 0 10-3-6.65" />
+            </svg>
+          </div>
           <p class="text-zinc-500 text-xs sm:text-sm mt-1">artists</p>
         </div>
       </div>
 
-      <!-- Top tracks + artists -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 
-        <!-- Top tracks -->
-        <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800">
-          <h2 class="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-4">
+        <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800 animate-fade-in-up [animation-delay:80ms]">
+          <h2 class="flex items-center gap-2 text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-4">
+            <span class="w-1 h-3 rounded-full bg-indigo-500"></span>
             Top tracks
           </h2>
           @if (s.topTracks.length === 0) {
@@ -71,11 +105,16 @@
             </p>
           } @else {
             <div class="space-y-0.5">
-              @for (track of s.topTracks; track track.spotifyUri) {
-                <div class="flex items-center gap-3 py-1.5 rounded-lg
-                            hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
+              @for (track of s.topTracks; track track.spotifyUri; let i = $index) {
+                <div class="group flex items-center gap-3 py-1.5 rounded-lg
+                            hover:bg-zinc-800/50 px-1 -mx-1 transition-all duration-200
+                            hover:translate-x-0.5
+                            animate-fade-in-up [animation-delay:var(--row-delay)]"
+                     [style.--row-delay]="rowDelay(i)">
                   @if (track.albumImageUrl) {
-                    <img [src]="track.albumImageUrl" alt="" class="w-8 h-8 rounded flex-shrink-0" />
+                    <img [src]="track.albumImageUrl" alt=""
+                      class="w-8 h-8 rounded flex-shrink-0 transition-transform duration-300
+                             group-hover:scale-110" />
                   } @else {
                     <div class="w-8 h-8 rounded bg-zinc-800 flex-shrink-0"></div>
                   }
@@ -92,9 +131,9 @@
           }
         </div>
 
-        <!-- Top artists -->
-        <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800">
-          <h2 class="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-4">
+        <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800 animate-fade-in-up [animation-delay:140ms]">
+          <h2 class="flex items-center gap-2 text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-4">
+            <span class="w-1 h-3 rounded-full bg-amber-500"></span>
             Top artists
           </h2>
           @if (s.topArtists.length === 0) {
@@ -104,13 +143,18 @@
           } @else {
             <div class="space-y-0.5">
               @for (artist of s.topArtists; track artist.artistName; let i = $index) {
-                <div class="flex items-center gap-3 py-1.5 rounded-lg
-                            hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
+                <div class="group flex items-center gap-3 py-1.5 rounded-lg
+                            hover:bg-zinc-800/50 px-1 -mx-1 transition-all duration-200
+                            hover:translate-x-0.5
+                            animate-fade-in-up [animation-delay:var(--row-delay)]"
+                     [style.--row-delay]="rowDelay(i)">
                   <span class="text-zinc-700 text-xs w-4 text-right flex-shrink-0 tabular-nums">
                     {{ i + 1 }}
                   </span>
                   @if (artist.albumImageUrl) {
-                    <img [src]="artist.albumImageUrl" alt="" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                    <img [src]="artist.albumImageUrl" alt=""
+                      class="w-8 h-8 rounded-full object-cover flex-shrink-0 transition-transform duration-300
+                             group-hover:scale-110" />
                   } @else {
                     <div class="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0"></div>
                   }
@@ -125,20 +169,25 @@
         </div>
       </div>
 
-      <!-- Recent listens -->
-      <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800">
-        <h2 class="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-4">
+      <div class="bg-zinc-900 rounded-xl p-5 border border-zinc-800 animate-fade-in-up [animation-delay:200ms]">
+        <h2 class="flex items-center gap-2 text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-4">
+          <span class="w-1 h-3 rounded-full bg-emerald-500"></span>
           Recent listens
         </h2>
         @if (s.recentListens.length === 0) {
           <p class="text-zinc-600 text-sm py-4 text-center">No listens yet — hit sync above</p>
         } @else {
           <div class="space-y-0.5">
-            @for (listen of s.recentListens; track listen.playedAt) {
-              <div class="flex items-center gap-3 py-1.5 rounded-lg
-                          hover:bg-zinc-800/50 px-1 -mx-1 transition-colors">
+            @for (listen of s.recentListens; track listen.playedAt; let i = $index) {
+              <div class="group flex items-center gap-3 py-1.5 rounded-lg
+                          hover:bg-zinc-800/50 px-1 -mx-1 transition-all duration-200
+                          hover:translate-x-0.5
+                          animate-fade-in-up [animation-delay:var(--row-delay)]"
+                   [style.--row-delay]="rowDelay(i)">
                 @if (listen.albumImageUrl) {
-                  <img [src]="listen.albumImageUrl" alt="" class="w-8 h-8 rounded flex-shrink-0" />
+                  <img [src]="listen.albumImageUrl" alt=""
+                    class="w-8 h-8 rounded flex-shrink-0 transition-transform duration-300
+                           group-hover:scale-110" />
                 } @else {
                   <div class="w-8 h-8 rounded bg-zinc-800 flex-shrink-0"></div>
                 }

@@ -1,6 +1,9 @@
 <app-nav-shell>
 
-  <main class="max-w-5xl mx-auto px-6 py-8">
+
+  <app-ambient-background variant="archetypes" />
+
+  <main class="max-w-5xl mx-auto px-6 py-8 relative">
 
     <!-- Header row -->
     <div class="flex items-center justify-between mb-8">
@@ -112,7 +115,6 @@
               </div>
             </div>
 
-            <!-- Description -->
             <p class="text-zinc-400 text-sm leading-relaxed flex-1">{{ a.description }}</p>
 
             <!-- Album art strip -->
@@ -125,7 +127,6 @@
               </div>
             }
 
-            <!-- Top artists -->
             @if (a.topArtists && a.topArtists.length > 0) {
               <div class="flex flex-wrap gap-x-3 gap-y-1">
                 @for (artist of a.topArtists; track artist) {
@@ -140,7 +141,6 @@
               </div>
             }
 
-            <!-- Similar artists -->
             @if (a.similarArtists && a.similarArtists.length > 0) {
               <div class="flex flex-wrap gap-x-2 gap-y-1 items-center">
                 <span class="text-xs text-zinc-600">if you like this →</span>
@@ -156,7 +156,6 @@
               </div>
             }
 
-            <!-- Style hashtags -->
             @if (a.styleTags && a.styleTags.length > 0) {
               <div class="flex flex-wrap gap-1.5">
                 @for (tag of a.styleTags; track tag) {

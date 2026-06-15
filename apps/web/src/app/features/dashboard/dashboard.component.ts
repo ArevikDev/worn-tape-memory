@@ -2,6 +2,7 @@ import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { NavShellComponent } from '../../shared/components/nav-shell.component';
+import { AmbientBackgroundComponent } from '../../shared/components/ambient-background.component';
 import type { UserStats, NowPlaying } from '@worn-tape-memory/shared';
 
 const API_BASE = 'http://127.0.0.1:3000';
@@ -9,7 +10,7 @@ const API_BASE = 'http://127.0.0.1:3000';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [NavShellComponent],
+  imports: [NavShellComponent, AmbientBackgroundComponent],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
@@ -62,6 +63,10 @@ export class DashboardComponent implements OnInit {
     } finally {
       this.syncing.set(false);
     }
+  }
+
+  rowDelay(i: number): string {
+    return `${Math.min(i * 40, 400)}ms`;
   }
 
   timeAgo(isoString: string): string {

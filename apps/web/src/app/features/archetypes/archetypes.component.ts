@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { NavShellComponent } from '../../shared/components/nav-shell.component';
+import { AmbientBackgroundComponent } from '../../shared/components/ambient-background.component';
 import type { Archetype } from '@worn-tape-memory/shared';
 
 const API_BASE = 'http://127.0.0.1:3000';
@@ -35,7 +36,7 @@ const ICON_EMOJI: Record<string, string> = {
 @Component({
   selector: 'app-archetypes',
   standalone: true,
-  imports: [NavShellComponent],
+  imports: [NavShellComponent, AmbientBackgroundComponent],
   templateUrl: './archetypes.component.html',
 })
 export class ArchetypesComponent implements OnInit {
