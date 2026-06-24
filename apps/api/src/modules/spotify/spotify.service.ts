@@ -225,6 +225,26 @@ export class SpotifyService {
     }
   }
 
+  async uploadPlaylistCover(
+    accessToken: string,
+    playlistId: string,
+    jpegBuffer: Buffer,
+  ): Promise<void> {
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/images`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'image/jpeg',
+      },
+      body: jpegBuffer.toString('base64'),
+    });
+    if (response.status === 202) return;
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Spotify uploadPlaylistCover ${response.status}: ${err.slice(0, 200)}`);
+    }
+  }
+
   // ── Playback ─────────────────────────────────────────────────────────────
 
   // Start immediate playback of track URIs on the user's active Spotify device.

@@ -10,6 +10,7 @@ import type { DrizzleClient } from '../../db';
 import { archetypes } from '../../db/schema';
 import { DRIZZLE_CLIENT } from '../auth/auth.service';
 import { SpotifyService } from '../spotify/spotify.service';
+import { CoverArtService } from './cover-art.service';
 
 export interface PlaylistExportResult {
   playlistId: string;
@@ -24,6 +25,7 @@ export class PlaylistsService {
   constructor(
     @Inject(DRIZZLE_CLIENT) private readonly db: DrizzleClient,
     private readonly spotify: SpotifyService,
+    private readonly coverArt: CoverArtService,
   ) {}
 
   async exportArchetypeAsPlaylist(
@@ -84,6 +86,14 @@ export class PlaylistsService {
         this.logger.log(
           `Created playlist ${playlistId} for archetype "${archetype.name}" (${uris.length} tracks)`,
         );
+      }
+
+      // Cover art upload is non-fatal — a failure here doesn't break the export
+      try {
+        const jpeg = await this.coverArt.generateJpeg(archetype.color);
+        await this.spotify.uploadPlaylistCover(accessToken, playlistId, jpeg);
+      } catch (err) {
+        this.logger.warn(`Cover art upload skipped: ${String(err).slice(0, 120)}`);
       }
 
       return { playlistId, playlistUrl, trackCount: uris.length };

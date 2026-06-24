@@ -47,8 +47,7 @@ export class ArchetypesComponent implements OnInit {
   protected readonly detecting = signal(false);
   protected readonly detectError = signal<string | null>(null);
 
-  // Single action per card: export playlist → open in Spotify app
-  protected readonly openingId = signal<string | null>(null);
+  protected readonly savingId = signal<string | null>(null);
 
   // Artist playback (clicking artist name chips)
   protected readonly loadingArtist = signal<string | null>(null);
@@ -128,9 +127,8 @@ export class ArchetypesComponent implements OnInit {
     }
   }
 
-  /** Export archetype as a Spotify playlist and open it on open.spotify.com. */
-  async openInSpotify(archetype: Archetype): Promise<void> {
-    this.openingId.set(archetype.id);
+  async saveToSpotify(archetype: Archetype): Promise<void> {
+    this.savingId.set(archetype.id);
     this.detectError.set(null);
     try {
       const result = await firstValueFrom(
@@ -140,17 +138,23 @@ export class ArchetypesComponent implements OnInit {
           { withCredentials: true },
         ),
       );
-      // Open the playlist on open.spotify.com — already in the user's library
-      // since it's owned by them; from here they can save/share it themselves.
-      window.open(result.playlistUrl, '_blank');
+      this.archetypes.update(list =>
+        list.map(a => a.id === archetype.id ? { ...a, spotifyPlaylistId: result.playlistId } : a),
+      );
     } catch (err: unknown) {
       const msg =
         err instanceof HttpErrorResponse
           ? (err.error?.message ?? err.message)
-          : 'Could not open in Spotify. Try again.';
+          : 'Could not save to Spotify. Try again.';
       this.detectError.set(msg);
     } finally {
-      this.openingId.set(null);
+      this.savingId.set(null);
+    }
+  }
+
+  openPlaylist(archetype: Archetype): void {
+    if (archetype.spotifyPlaylistId) {
+      window.open(`https://open.spotify.com/playlist/${archetype.spotifyPlaylistId}`, '_blank');
     }
   }
 
