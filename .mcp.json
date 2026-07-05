@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "angular": {
+      "type": "stdio",
+      "command": "node_modules/.bin/ng",
+      "args": ["mcp"],
+      "cwd": "/Users/arevik/Documents/Coding/worn-tape-memory/apps/web"
+    }
+  }
+}
